@@ -27,6 +27,9 @@ public class AuthInterceptor implements HandlerInterceptor {
         // 解析token
         Map<String, Object> map = TokenUtil.parseToken(token);
         Long userId = (Long) map.get("userId");
+        if (userId == null || userId <= 0) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(401)));
+        }
 
         // 存入 ThreadLocal
         UserContext.setUserId(userId);

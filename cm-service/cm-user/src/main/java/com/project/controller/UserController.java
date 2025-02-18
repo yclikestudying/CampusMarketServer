@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import java.util.Map;
 import java.util.Objects;
 
 @RestController
@@ -33,4 +34,16 @@ public class UserController {
         return Result.success(Objects.requireNonNull(ResultCodeEnum.getByCode(200)), uservo);
     }
 
+    /**
+     * 修改用户个人信息
+     *
+     * @param map   用户修改的信息数据
+     * @return success or fail
+     */
+    @PutMapping("/updateUser")
+    @ApiOperation(value = "修改用户个人信息")
+    public Result<String> updateUserInfo(@RequestBody Map<String, Object> map) {
+        boolean result = userService.updateUser(UserContext.getUserId(), map);
+        return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
+    }
 }
