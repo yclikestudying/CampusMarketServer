@@ -3,8 +3,10 @@ package com.project.interceptor;
 import com.project.common.ResultCodeEnum;
 import com.project.exception.BusinessExceptionHandler;
 import com.project.util.TokenUtil;
+import com.project.util.UserContext;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -25,8 +27,14 @@ public class AuthInterceptor implements HandlerInterceptor {
         // 解析token
         Map<String, Object> map = TokenUtil.parseToken(token);
         Long userId = (Long) map.get("userId");
-        request.setAttribute("userId", userId);
 
+        // 存入 ThreadLocal
+        UserContext.setUserId(userId);
         return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        UserContext.clear();
     }
 }

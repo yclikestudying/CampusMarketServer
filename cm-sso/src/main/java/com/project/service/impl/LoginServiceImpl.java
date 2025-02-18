@@ -93,7 +93,7 @@ public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
 
         User one = new User();
         one.setUserPhone(phone);
-        one.setUserPassword(password);
+        one.setUserPassword(MD5Util.calculateMD5(password));
         return loginMapper.insert(one) > 0;
     }
 }
