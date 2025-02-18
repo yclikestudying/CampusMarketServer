@@ -9,6 +9,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.util.Map;
@@ -44,6 +45,19 @@ public class UserController {
     @ApiOperation(value = "修改用户个人信息")
     public Result<String> updateUserInfo(@RequestBody Map<String, Object> map) {
         boolean result = userService.updateUser(UserContext.getUserId(), map);
+        return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
+    }
+
+    /**
+     * 修改用户头像
+     *
+     * @param file  文件
+     * @return success or fail
+     */
+    @PostMapping("/updateAvatar")
+    @ApiOperation(value = "修改用户头像")
+    public Result<String> updateAvatar(@RequestParam("file") MultipartFile file) {
+        boolean result = userService.updateAvatar(UserContext.getUserId(), file);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
     }
 }

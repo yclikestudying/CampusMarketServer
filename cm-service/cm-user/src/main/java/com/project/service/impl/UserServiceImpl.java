@@ -10,11 +10,14 @@ import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.UserMapper;
 import com.project.service.UserService;
 import com.project.util.TokenUtil;
+import com.project.util.UploadAvatar;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
@@ -129,5 +132,35 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         // 修改数据库数据
         return userMapper.update(user, updateWrapper) > 0;
+    }
+
+    /**
+     * 修改用户头像
+     *
+     * @param userId 用户id
+     * @param file 文件
+     * @return
+     */
+    @Override
+    public boolean updateAvatar(Long userId, MultipartFile file) {
+        // 验证参数
+        if (file == null || file.isEmpty()) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+
+        // 上传照片到阿里云服务器，并返回新的访问地址
+        String newLink = null;
+        try {
+            newLink = UploadAvatar.uploadAvatar(file, "avatar");
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        // 存储照片地址
+        User user = new User();
+        user.setUserId(userId);
+        user.setUserAvatar(newLink);
+        userMapper.updateById(user);
+        return true;
     }
 }
