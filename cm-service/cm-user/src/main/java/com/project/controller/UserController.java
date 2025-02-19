@@ -3,11 +3,13 @@ package com.project.controller;
 import com.project.VO.UserVO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
+import com.project.constants.RedisKeyConstants;
 import com.project.service.UserService;
 import com.project.util.UserContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,6 +24,8 @@ import java.util.Objects;
 public class UserController {
     @Resource
     private UserService userService;
+    @Resource
+    private RedisTemplate<String, String> redisTemplate;
 
     /**
      * 根据用户id查询用户信息
@@ -59,5 +63,14 @@ public class UserController {
     public Result<String> updateAvatar(@RequestParam("file") MultipartFile file) {
         boolean result = userService.updateAvatar(UserContext.getUserId(), file);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
+    }
+
+    /**
+     * 用户退出登录
+     */
+    @DeleteMapping("/logout")
+    @ApiOperation(value = "用户退出")
+    public void logout() {
+        redisTemplate.delete(RedisKeyConstants.getUserTokenKey(UserContext.getUserId()));
     }
 }
