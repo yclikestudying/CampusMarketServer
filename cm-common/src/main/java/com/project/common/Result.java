@@ -2,9 +2,9 @@ package com.project.common;
 
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
-@Builder
 public class Result<T> {
     // 响应码
     private Integer code;
@@ -15,14 +15,17 @@ public class Result<T> {
     // 响应时间戳
     private Long timestamp;
 
+    public Result() {
+        this.timestamp = System.currentTimeMillis();
+    }
+
     // 请求成功或失败的共同部分
     public static <T> Result<T> build(Integer code, String message, T data) {
-        return Result.<T>builder()
-                .code(code)
-                .message(message)
-                .data(data)
-                .timestamp(System.currentTimeMillis())
-                .build();
+        Result<T> result = new Result<>();
+        result.setCode(code);
+        result.setMessage(message);
+        result.setData(data);
+        return result;
     }
 
     // 请求成功携带数据

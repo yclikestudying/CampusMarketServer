@@ -1,5 +1,6 @@
 package com.project.controller;
 
+import com.project.VO.FriendVO;
 import com.project.VO.UserVO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -72,5 +74,14 @@ public class UserController {
     @ApiOperation(value = "用户退出")
     public void logout() {
         redisTemplate.delete(RedisKeyConstants.getUserTokenKey(UserContext.getUserId()));
+    }
+
+    /**
+     * 批量获取用户信息
+     */
+    @PostMapping("/getUserInfo")
+    @ApiOperation(value = "批量获取用户信息")
+    public List<FriendVO> getUserInfo(@RequestBody List<Long> ids) {
+        return userService.getUserInfo(ids);
     }
 }

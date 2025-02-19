@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
+import com.project.VO.FriendVO;
 import com.project.VO.UserVO;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
@@ -13,6 +14,7 @@ import com.project.mapper.UserMapper;
 import com.project.service.UserService;
 import com.project.util.TokenUtil;
 import com.project.util.UploadAvatar;
+import com.project.util.UserContext;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -22,8 +24,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
@@ -44,27 +48,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public UserVO getUserInfoByUserId(Long id) {
         // 验证id
-        if (id <= 0) {
+        Long userId = getUserId(id);
+        if (userId <= 0) {
             throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
         }
 
         // redis查询
-        String userInfo = redisTemplate.opsForValue().get(RedisKeyConstants.getUserInfoKey(id));
-        User user = gson.fromJson(userInfo, User.class);
-
-        if (user == null) {
-            // redis数据为空，则查询数据库
-            user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id", id));
+        String userStr = redisTemplate.opsForValue().get(RedisKeyConstants.getUserInfoKey(userId));
+        UserVO userVO = gson.fromJson(userStr, UserVO.class);
+        if (userVO == null) {
+            // redis为空，查询数据库
+            User user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id", userId));
             if (user == null) {
-                throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(401)));
-            } else {
-                redisTemplate.opsForValue().set(RedisKeyConstants.getUserInfoKey(id), gson.toJson(user));
+                throw new BusinessExceptionHandler(200, "用户不存在");
             }
+            userVO = new UserVO();
+            BeanUtils.copyProperties(user, userVO);
+            // 存入redis
+            redisTemplate.opsForValue().set(RedisKeyConstants.getUserInfoKey(userId), gson.toJson(userVO));
         }
 
-        // 数据脱敏
-        UserVO userVO = new UserVO();
-        BeanUtils.copyProperties(user, userVO);
         return userVO;
     }
 
@@ -169,7 +172,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * 修改用户头像
      *
      * @param userId 用户id
-     * @param file 文件
+     * @param file   文件
      * @return
      */
     @Transactional
@@ -202,5 +205,41 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         return true;
+    }
+
+    /**
+     * 批量查询用户
+     *
+     * @param ids
+     * @return
+     */
+    @Override
+    public List<FriendVO> getUserInfo(List<Long> ids) {
+        // 验证
+        if (ids.isEmpty()) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+
+        // 查询
+        List<User> users = userMapper.selectBatchIds(ids);
+        if (users != null && !users.isEmpty()) {
+            // 脱敏
+            return users.stream().map(user -> {
+                FriendVO friendVO = new FriendVO();
+                friendVO.setUserId(user.getUserId());
+                friendVO.setUserAvatar(user.getUserAvatar());
+                friendVO.setUserName(user.getUserName());
+                friendVO.setUserProfile(user.getUserProfile());
+                return friendVO;
+            }).collect(Collectors.toList());
+        }
+
+        return null;
+    }
+
+    private Long getUserId(Long id) {
+        // id存在，查询别人的信息
+        // id不存在，查询自己的信息
+        return id == null ? UserContext.getUserId() : id;
     }
 }

@@ -9,16 +9,17 @@ import java.util.Date;
 import lombok.Data;
 
 /**
- * 关注表
+ * 关系表
+ * @TableName friends
  */
-@TableName(value ="user_follows")
+@TableName(value ="friends")
 @Data
-public class UserFollows implements Serializable {
+public class Friends implements Serializable {
     /**
-     * 关注表id
+     * 主键
      */
     @TableId(type = IdType.AUTO)
-    private Long followId;
+    private Long id;
 
     /**
      * 关注者id
@@ -28,20 +29,15 @@ public class UserFollows implements Serializable {
     /**
      * 被关注者id
      */
-    private Long followedId;
+    private Long followeeId;
 
     /**
-     * 关注时间
+     * 建立关系时间
      */
     private Date createTime;
 
     /**
-     * 更新时间
-     */
-    private Date updateTime;
-
-    /**
-     * 0-未删除 1-已删除
+     * 0-未删除，1-删除
      */
     private Integer isDelete;
 

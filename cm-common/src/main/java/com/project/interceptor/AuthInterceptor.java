@@ -35,7 +35,7 @@ public class AuthInterceptor implements HandlerInterceptor {
         Long userId = (Long) map.get("userId");
 
         // 查询redis是否存在token
-        String redisToken = redisTemplate.opsForValue().get(RedisKeyConstants.getUserInfoKey(userId));
+        String redisToken = redisTemplate.opsForValue().get(RedisKeyConstants.getUserTokenKey(userId));
         if (!Objects.equals(redisToken, token)) {
             throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(401)));
         }
