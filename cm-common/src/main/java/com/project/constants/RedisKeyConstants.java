@@ -7,7 +7,8 @@ public class RedisKeyConstants {
     public static final String USER_INFO_PREFIX = "user:info:";   // 用户信息前缀
     public static final String USER_ATTENTION = "user:attention:"; // 我的关注用户前缀
     public static final String USER_FANS = "user:fans:"; // 我的粉丝前缀
-    public static final String USER_ATTENTION_AND_FANS = "user:attention_and_fans:"; // 互关用户前轴
+    public static final String USER_ATTENTION_AND_FANS = "user:attention_and_fans:"; // 互关用户前缀
+    public static final String USER_ARTICLE = "user:article:"; // 用户动态前缀
 
     // 生成用户 Token 的 Key
     public static String getUserTokenKey(Long userId) {
@@ -27,7 +28,11 @@ public class RedisKeyConstants {
         return USER_FANS + userId;
     }
     // 生成互关用户的 Key
-    public static String getUserAttentionAndFans(Long userId) {
+    public static String getUserAttentionAndFansKey(Long userId) {
         return USER_ATTENTION_AND_FANS + userId;
+    }
+    // 生成用户动态的 Key
+    public static String getUserArticleKey(Long userId) {
+        return USER_ARTICLE + userId;
     }
 }

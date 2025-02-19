@@ -118,7 +118,7 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
         }
 
         // 查询redis
-        String listStr = redisTemplate.opsForValue().get(RedisKeyConstants.getUserAttentionAndFans(userId));
+        String listStr = redisTemplate.opsForValue().get(RedisKeyConstants.getUserAttentionAndFansKey(userId));
         List<FriendVO> list = gson.fromJson(listStr, new TypeToken<List<FriendVO>>() {
         }.getType());
 
@@ -132,7 +132,7 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
             // 获取用户id
             List<FriendVO> friendVOList = friendsFeignClient.getUserInfo(attentionList.stream().map(FriendVO::getUserId).collect(Collectors.toList()));
             // 存入redis
-            redisTemplate.opsForValue().set(RedisKeyConstants.getUserAttentionAndFans(userId), gson.toJson(friendVOList));
+            redisTemplate.opsForValue().set(RedisKeyConstants.getUserAttentionAndFansKey(userId), gson.toJson(friendVOList));
             return friendVOList;
         }
 
