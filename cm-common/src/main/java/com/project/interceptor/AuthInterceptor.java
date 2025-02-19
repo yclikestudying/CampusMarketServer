@@ -1,13 +1,16 @@
 package com.project.interceptor;
 
 import com.project.common.ResultCodeEnum;
+import com.project.constants.RedisKeyConstants;
 import com.project.exception.BusinessExceptionHandler;
 import com.project.util.TokenUtil;
 import com.project.util.UserContext;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
@@ -15,6 +18,9 @@ import java.util.Objects;
 
 @Component
 public class AuthInterceptor implements HandlerInterceptor {
+    @Resource
+    private RedisTemplate<String, String> redisTemplate;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         // 从请求头中获取Token
@@ -27,7 +33,10 @@ public class AuthInterceptor implements HandlerInterceptor {
         // 解析token
         Map<String, Object> map = TokenUtil.parseToken(token);
         Long userId = (Long) map.get("userId");
-        if (userId == null || userId <= 0) {
+
+        // 查询redis是否存在token
+        String redisToken = redisTemplate.opsForValue().get(RedisKeyConstants.getUserInfoKey(userId));
+        if (!Objects.equals(redisToken, token)) {
             throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(401)));
         }
 

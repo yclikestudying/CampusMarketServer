@@ -3,8 +3,10 @@ package com.project.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.Gson;
 import com.project.DTO.PhoneDTO;
 import com.project.common.ResultCodeEnum;
+import com.project.constants.RedisKeyConstants;
 import com.project.domain.User;
 import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.LoginMapper;
@@ -27,7 +29,9 @@ public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
     private LoginMapper loginMapper;
 
     @Resource
-    private RedisTemplate<String, Object> redisTemplate;
+    private RedisTemplate<String, String> redisTemplate;
+
+    private final Gson gson = new Gson();
 
     /**
      * 手机登录
@@ -60,8 +64,10 @@ public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
         // 生成token
         String token = TokenUtil.createToken(user.getUserId(), user.getUserPhone());
 
-        // 存入redis
-        redisTemplate.opsForValue().set("token", token);
+        // token存入redis
+        redisTemplate.opsForValue().set(RedisKeyConstants.getUserTokenKey(user.getUserId()), token);
+        // 用户信息存入redis
+        redisTemplate.opsForValue().set(RedisKeyConstants.getUserInfoKey(user.getUserId()), gson.toJson(user));
 
         return Collections.singletonMap("token", token);
     }

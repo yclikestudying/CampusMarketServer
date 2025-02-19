@@ -3,8 +3,10 @@ package com.project.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.google.gson.Gson;
 import com.project.VO.UserVO;
 import com.project.common.ResultCodeEnum;
+import com.project.constants.RedisKeyConstants;
 import com.project.domain.User;
 import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.UserMapper;
@@ -13,7 +15,9 @@ import com.project.util.TokenUtil;
 import com.project.util.UploadAvatar;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
@@ -26,6 +30,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
     @Resource
     private UserMapper userMapper;
+    @Resource
+    private RedisTemplate<String, String> redisTemplate;
+
+    private final Gson gson = new Gson();
 
     /**
      * 根据id查询用户信息
@@ -35,10 +43,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      */
     @Override
     public UserVO getUserInfoByUserId(Long id) {
-        // 查询用户
-        User user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id", id));
+        // 验证id
+        if (id <= 0) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+
+        // redis查询
+        String userInfo = redisTemplate.opsForValue().get(RedisKeyConstants.getUserInfoKey(id));
+        User user = gson.fromJson(userInfo, User.class);
+
         if (user == null) {
-            throw new BusinessExceptionHandler(201, "用户不存在");
+            // redis数据为空，则查询数据库
+            user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id", id));
+            if (user == null) {
+                throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(401)));
+            } else {
+                redisTemplate.opsForValue().set(RedisKeyConstants.getUserInfoKey(id), gson.toJson(user));
+            }
         }
 
         // 数据脱敏
@@ -54,6 +75,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @param map
      * @return
      */
+    @Transactional
     @Override
     public boolean updateUser(Long userId, Map<String, Object> map) {
         // 获取要修改的参数名和参数值
@@ -131,7 +153,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         // 修改数据库数据
-        return userMapper.update(user, updateWrapper) > 0;
+        int result = userMapper.update(user, updateWrapper);
+
+        // 删除redis缓存
+        Boolean delete = redisTemplate.delete(RedisKeyConstants.getUserInfoKey(userId));
+
+        if (result <= 0 || delete == null || !delete) {
+            throw new BusinessExceptionHandler(200, "数据库操作失败");
+        }
+
+        return true;
     }
 
     /**
@@ -141,6 +172,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
      * @param file 文件
      * @return
      */
+    @Transactional
     @Override
     public boolean updateAvatar(Long userId, MultipartFile file) {
         // 验证参数
@@ -160,7 +192,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         User user = new User();
         user.setUserId(userId);
         user.setUserAvatar(newLink);
-        userMapper.updateById(user);
+        int result = userMapper.updateById(user);
+
+        // 删除redis缓存
+        Boolean delete = redisTemplate.delete(RedisKeyConstants.getUserInfoKey(userId));
+
+        if (result <= 0 || delete == null || !delete) {
+            throw new BusinessExceptionHandler(200, "数据库操作失败");
+        }
+
         return true;
     }
 }
