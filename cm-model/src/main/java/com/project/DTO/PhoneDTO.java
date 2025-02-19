@@ -3,7 +3,7 @@ package com.project.DTO;
 import lombok.Data;
 
 @Data
-public class Phone {
+public class PhoneDTO {
 
     /**
      * 手机号码
@@ -14,4 +14,9 @@ public class Phone {
      * 密码
      */
     private String password;
+
+    /**
+     * 二次密码
+     */
+    private String checkPassword;
 }

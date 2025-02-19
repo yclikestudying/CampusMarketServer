@@ -1,8 +1,7 @@
 package com.project.controller;
 
 
-import com.project.DTO.PhoneLoginDTO;
-import com.project.DTO.PhoneRegisterDTO;
+import com.project.DTO.PhoneDTO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
 import com.project.service.LoginService;
@@ -25,28 +24,28 @@ public class LoginController {
     /**
      * 用户手机登录
      *
-     * @param phoneLoginDTO 登录信息
+     * @param phoneDTO 登录信息
      * @return
      */
     @PostMapping("/phoneLogin")
     @ApiOperation(value = "用户手机登录")
-    public Result<Map<String, Object>> login(@RequestBody PhoneLoginDTO phoneLoginDTO) {
-        log.info("用户登录，请求参数:{}", phoneLoginDTO);
-        Map<String, Object> map = loginService.phoneLogin(phoneLoginDTO);
+    public Result<Map<String, Object>> login(@RequestBody PhoneDTO phoneDTO) {
+        log.info("用户登录，请求参数:{}", phoneDTO);
+        Map<String, Object> map = loginService.phoneLogin(phoneDTO);
         return Result.success(ResultCodeEnum.SUCCESS, map);
     }
 
     /**
      * 用户手机注册
      *
-     * @param phoneRegisterDTO 注册信息
+     * @param phoneDTO 注册信息
      * @return
      */
     @PostMapping("/phoneRegister")
     @ApiOperation(value = "用户手机注册")
-    public Result<String> register(@RequestBody PhoneRegisterDTO phoneRegisterDTO) {
-        log.info("用户注册，请求参数:{}", phoneRegisterDTO);
-        boolean result = loginService.phoneRegister(phoneRegisterDTO);
+    public Result<String> register(@RequestBody PhoneDTO phoneDTO) {
+        log.info("用户注册，请求参数:{}", phoneDTO);
+        boolean result = loginService.phoneRegister(phoneDTO);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.success(ResultCodeEnum.FAIL);
     }
 }
