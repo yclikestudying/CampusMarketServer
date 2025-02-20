@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.List;
 
-@FeignClient(name = "friendsFeignClient", url = "http://localhost:8082")
-public interface FriendsFeignClient {
+@FeignClient(name = "userFeignClient", url = "http://localhost:8082")
+public interface UserFeignClient {
     /**
      * 批量查询用户
      * @param ids

@@ -11,6 +11,9 @@ public class RedisKeyConstants {
     public static final String ARTICLE_USER = "article:user:"; // 用户动态前缀
     public static final String ARTICLE_SCHOOL = "article:school:"; // 校园动态前缀
     public static final String ARTICLE_ATTENTION = "article:attention:"; // 关注用户动态前缀
+    public static final String LIKE_USER = "like:user:"; // 用户自己的文章点赞前缀
+    public static final String LIKE_SCHOOL = "like:school:"; // 校园动态点赞前缀
+    public static final String LIKE_ATTENTION = "like:attention:"; // 关注用户动态的点赞前缀
 
     // 生成用户 Token 的 Key
     public static String getUserTokenKey(Long userId) {
@@ -43,4 +46,12 @@ public class RedisKeyConstants {
     }
     // 生成关注用户动态的 Key
     public static String getArticleAttentionKey(Long userId) {return ARTICLE_ATTENTION + userId;}
+    // 生成用户自己的文章点赞的 Key
+    public static String getLikeUserKey(Long userId) {return LIKE_USER + userId;}
+    // 生成校园动态点赞的 Key
+    public static String getLikeSchoolKey(Long userId) {return LIKE_SCHOOL + userId;}
+
+    public static String getRedisKey(String str, Long userId) {
+        return str + userId;
+    }
 }

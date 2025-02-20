@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@FeignClient(name = "articleFeignClient", url = "http://localhost:8083")
-public interface ArticleFeignClient {
+@FeignClient(name = "friendFeignClient", url = "http://localhost:8083")
+public interface FriendFeignClient {
     @GetMapping("/friend/attentionApi")
     List<FriendVO> attentionApi(@RequestParam(value = "userId", required = false) Long userId);
 }

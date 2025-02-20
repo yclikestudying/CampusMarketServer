@@ -5,8 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.project.VO.FriendVO;
-import com.project.api.FriendsFeignClient;
-import com.project.common.Result;
+import com.project.api.UserFeignClient;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
 import com.project.domain.Friends;
@@ -16,7 +15,6 @@ import com.project.service.FriendsService;
 import com.project.util.UserContext;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Objects;
@@ -30,7 +28,7 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
     @Resource
     private RedisTemplate<String, String> redisTemplate;
     @Resource
-    private FriendsFeignClient friendsFeignClient;
+    private UserFeignClient userFeignClient;
     private final Gson gson = new Gson();
 
     /**
@@ -60,7 +58,7 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
                 // 调用 cm-user 模块，获取用户信息
                 List<FriendVO> friendList = null;
                 try {
-                    friendList = friendsFeignClient.getUserInfoApi(friendsList.stream().map(Friends::getFolloweeId).collect(Collectors.toList()));
+                    friendList = userFeignClient.getUserInfoApi(friendsList.stream().map(Friends::getFolloweeId).collect(Collectors.toList()));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -99,7 +97,7 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
                 return null;
             } else {
                 // 调用 cm-user 模块，获取用户信息
-                List<FriendVO> friendVOList = friendsFeignClient.getUserInfoApi(friendsList.stream().map(Friends::getFollowerId).collect(Collectors.toList()));
+                List<FriendVO> friendVOList = userFeignClient.getUserInfoApi(friendsList.stream().map(Friends::getFollowerId).collect(Collectors.toList()));
                 // 存入redis
                 redisTemplate.opsForValue().set(RedisKeyConstants.getUserFansKey(userId), gson.toJson(friendVOList));
                 return friendVOList;
@@ -136,7 +134,7 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
             // 获取交集
             attentionList.retainAll(fansList);
             // 调用 cm-user 模块，获取用户信息
-            List<FriendVO> friendVOList = friendsFeignClient.getUserInfoApi(attentionList.stream().map(FriendVO::getUserId).collect(Collectors.toList()));
+            List<FriendVO> friendVOList = userFeignClient.getUserInfoApi(attentionList.stream().map(FriendVO::getUserId).collect(Collectors.toList()));
             // 存入redis
             redisTemplate.opsForValue().set(RedisKeyConstants.getUserAttentionAndFansKey(userId), gson.toJson(friendVOList));
             return friendVOList;

@@ -6,7 +6,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.project.VO.ArticleVO;
 import com.project.VO.FriendVO;
-import com.project.api.ArticleFeignClient;
+import com.project.api.FriendFeignClient;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
 import com.project.domain.Article;
@@ -31,7 +31,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
     @Resource
     private RedisTemplate<String, String> redisTemplate;
     @Resource
-    private ArticleFeignClient articleFeignClient;
+    private FriendFeignClient friendFeignClient;
     private final Gson gson = new Gson();
 
     /**
@@ -95,7 +95,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
             // 调用 cm-friend 模块，获取到关注的用户id
             List<FriendVO> list = null;
             try {
-                list = articleFeignClient.attentionApi(userId);
+                list = friendFeignClient.attentionApi(userId);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -141,7 +141,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         if (list == null || list.isEmpty()) {
             // redis为空，查询数据库
             // 调用 cm-friend 模块，获取关注用户id
-            List<FriendVO> friendVOList = articleFeignClient.attentionApi(userId);
+            List<FriendVO> friendVOList = friendFeignClient.attentionApi(userId);
             List<Long> ids = friendVOList.stream().map(FriendVO::getUserId).collect(Collectors.toList());
             // 根据id批量查询动态
             List<Article> articles = articleMapper.selectList(new QueryWrapper<Article>()
