@@ -1,10 +1,17 @@
 package com.project.util;
 
 import com.project.constants.RedisKeyConstants;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
 
+import javax.annotation.Resource;
+
+@Component
 public class RedisUtil {
-    private static final RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+    @Resource
+    private RedisTemplate<String, String> redisTemplate;
+
 
     /**
      * 存储数据
@@ -13,7 +20,7 @@ public class RedisUtil {
      * @param userId
      * @param data
      */
-    public static void saveIntoRedis(String str, Long userId, String data) {
+    public void saveIntoRedis(String str, Long userId, String data) {
         String redisKey = RedisKeyConstants.getRedisKey(str, userId);
         redisTemplate.opsForValue().set(redisKey, data);
     }
@@ -25,7 +32,7 @@ public class RedisUtil {
      * @param userId
      * @return
      */
-    public static String getFromRedis(String str, Long userId) {
+    public String getFromRedis(String str, Long userId) {
         String redisKey = RedisKeyConstants.getRedisKey(str, userId);
         return redisTemplate.opsForValue().get(redisKey);
     }
