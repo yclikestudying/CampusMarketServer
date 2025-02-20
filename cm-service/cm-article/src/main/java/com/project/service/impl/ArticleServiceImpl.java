@@ -14,9 +14,12 @@ import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.ArticleMapper;
 import com.project.service.ArticleService;
 import com.project.util.UserContext;
+import com.project.util.ValidateUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -24,6 +27,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         implements ArticleService {
     @Resource
@@ -165,6 +169,43 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         }
 
         return list;
+    }
+
+    /**
+     * 根据动态id删除动态
+     *
+     * @param articleId
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class) // 确保所有异常都会触发回滚
+    @Override
+    public boolean deleteByArticleId(Long articleId) {
+        // 验证参数
+        ValidateUtil.validateSingleLongTypeParam(articleId);
+
+        // 删除数据库记录
+        int deletedRows = articleMapper.deleteById(articleId);
+        if (deletedRows == 0) {
+            log.warn("id为{}的文章不存在", articleId);
+            return false;
+        }
+
+        // 删除 Redis 记录
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, UserContext.getUserId());
+        try {
+            // 开启 Redis 事务
+            redisTemplate.setEnableTransactionSupport(true); // 启用事务支持
+            redisTemplate.multi(); // 开始事务
+            redisTemplate.delete(redisKey); // 删除操作
+            redisTemplate.exec(); // 提交事务
+        } catch (Exception e) {
+            // Redis 操作失败，回滚 Redis 事务
+            redisTemplate.discard(); // 丢弃事务
+            log.error("Redis 发生异常，操作失败");
+            throw new RuntimeException(e);
+        }
+
+        return true;
     }
 
     private Long getUserId(Long id) {

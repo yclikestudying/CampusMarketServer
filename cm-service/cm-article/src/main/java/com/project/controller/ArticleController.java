@@ -8,10 +8,7 @@ import com.project.util.UserContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -52,5 +49,18 @@ public class ArticleController {
     public Result<List<ArticleVO>> queryArticleByAttention() {
         List<ArticleVO> list = articleService.queryArticleByAttention(UserContext.getUserId());
         return Result.success(ResultCodeEnum.SUCCESS, list);
+    }
+
+    /**
+     * 根据动态id删除动态
+     *
+     * @param articleId
+     * @return
+     */
+    @DeleteMapping("/deleteByArticleId")
+    @ApiOperation(value = "根据动态id删除动态")
+    public Result<String> deleteByArticleId(@RequestParam("articleId") Long articleId) {
+        boolean result = articleService.deleteByArticleId(articleId);
+        return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
     }
 }
