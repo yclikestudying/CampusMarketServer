@@ -75,14 +75,4 @@ public class UserController {
     public void logout() {
         redisTemplate.delete(RedisKeyConstants.getUserTokenKey(UserContext.getUserId()));
     }
-
-    /**
-     * 批量获取用户信息
-     * 提供给其他模块调用
-     */
-    @PostMapping("/getUserInfoApi")
-    @ApiOperation(value = "批量获取用户信息API")
-    public List<FriendVO> getUserInfoApi(@RequestBody List<Long> ids) {
-        return userService.getUserInfo(ids);
-    }
 }

@@ -53,31 +53,4 @@ public class ArticleController {
         List<ArticleVO> list = articleService.queryArticleByAttention(UserContext.getUserId());
         return Result.success(ResultCodeEnum.SUCCESS, list);
     }
-
-    /**
-     * 根据用户id查询动态API
-     */
-    @GetMapping("/queryArticleByUserIdApi")
-    @ApiOperation(value = "根据用户id查询动态API")
-    public List<ArticleVO> queryArticleByUserIdApi(@RequestParam(value = "userId", required = false) Long userId) {
-        return articleService.queryArticleByUserId(userId);
-    }
-
-    /**
-     * 查询校园动态API（不包括关注的用户的动态）
-     */
-    @GetMapping("/queryArticleApi")
-    @ApiOperation(value = "查询校园动态API")
-    public List<ArticleVO> queryArticleApi() {
-        return articleService.queryArticle(UserContext.getUserId());
-    }
-
-    /**
-     * 查询关注用户的动态API
-     */
-    @GetMapping("/queryArticleByAttentionApi")
-    @ApiOperation(value = "查询关注用户的动态API")
-    public List<ArticleVO> queryArticleByAttentionApi() {
-        return articleService.queryArticleByAttention(UserContext.getUserId());
-    }
 }

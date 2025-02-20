@@ -57,16 +57,4 @@ public class FriendsController {
         List<FriendVO> list = friendsService.attentionAndFans(userId);
         return Result.success(ResultCodeEnum.SUCCESS, list);
     }
-
-    /**
-     * 查询我的关注api
-     *
-     * @param userId 用户id
-     * @return
-     */
-    @GetMapping("/attentionApi")
-    @ApiOperation(value = "查询关注用户API")
-    public List<FriendVO> attentionApi(@RequestParam(value = "userId", required = false) Long userId) {
-        return friendsService.attention(userId);
-    }
 }

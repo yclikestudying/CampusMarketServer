@@ -16,8 +16,6 @@
         <module>cm-friend</module>
         <module>cm-article</module>
         <module>cm-like</module>
-        <module>cm-comment</module>
-        <module>cm-comment</module>
     </modules>
 
     <properties>
