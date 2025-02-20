@@ -9,4 +9,10 @@ import java.util.List;
 public interface ArticleService extends IService<Article> {
     // 根据用户id查询动态
     List<ArticleVO> queryArticleByUserId(Long id);
+
+    // 查询校园动态（不包括关注的用户的动态）
+    List<ArticleVO> queryArticle(Long userId);
+
+    // 查询关注用户的动态
+    List<ArticleVO> queryArticleByAttention(Long userId);
 }

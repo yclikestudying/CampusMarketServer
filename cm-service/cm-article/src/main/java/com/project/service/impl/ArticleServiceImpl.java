@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.project.VO.ArticleVO;
+import com.project.VO.FriendVO;
+import com.project.api.ArticleFeignClient;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
 import com.project.domain.Article;
@@ -28,6 +30,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
     private ArticleMapper articleMapper;
     @Resource
     private RedisTemplate<String, String> redisTemplate;
+    @Resource
+    private ArticleFeignClient articleFeignClient;
     private final Gson gson = new Gson();
 
     /**
@@ -45,7 +49,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         }
 
         // 查询redis
-        String listStr = redisTemplate.opsForValue().get(RedisKeyConstants.getUserArticleKey(userId));
+        String listStr = redisTemplate.opsForValue().get(RedisKeyConstants.getArticleUserKey(userId));
         List<ArticleVO> list = gson.fromJson(listStr, new TypeToken<List<ArticleVO>>() {
         }.getType());
 
@@ -56,16 +60,108 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
                     .eq("user_id", userId));
             if (articles == null || articles.isEmpty()) {
                 return null;
-            } else {
-                List<ArticleVO> collect = articles.stream().map(article -> {
-                    ArticleVO articleVO = new ArticleVO();
-                    BeanUtils.copyProperties(article, articleVO);
-                    return articleVO;
-                }).collect(Collectors.toList());
-                // 存入redis
-                redisTemplate.opsForValue().set(RedisKeyConstants.getUserArticleKey(userId), gson.toJson(collect));
-                return collect;
             }
+            List<ArticleVO> collect = articles.stream().map(article -> {
+                ArticleVO articleVO = new ArticleVO();
+                BeanUtils.copyProperties(article, articleVO);
+                return articleVO;
+            }).collect(Collectors.toList());
+            // 存入redis
+            redisTemplate.opsForValue().set(RedisKeyConstants.getArticleUserKey(userId), gson.toJson(collect));
+            return collect;
+        }
+
+        return list;
+    }
+
+    /**
+     * 查询校园动态（不包括关注的用户的动态）
+     *
+     * @return
+     */
+    @Override
+    public List<ArticleVO> queryArticle(Long userId) {
+        if (userId <= 0) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+
+        // 查询redis
+        String listStr = redisTemplate.opsForValue().get(RedisKeyConstants.getArticleSchoolKey(userId));
+        List<ArticleVO> articleVOList = gson.fromJson(listStr, new TypeToken<List<ArticleVO>>() {
+        }.getType());
+
+        if (articleVOList == null || articleVOList.isEmpty()) {
+            // 查询数据库
+            // 调用 cm-friend 模块，获取到关注的用户id
+            List<FriendVO> list = null;
+            try {
+                list = articleFeignClient.attentionApi(userId);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            List<Long> collect = list.stream().map(FriendVO::getUserId).collect(Collectors.toList());
+            collect.add(userId);
+
+            // 查询动态，把关注的用户和本身的动态排除在外
+            List<Article> articles = articleMapper.selectList(new QueryWrapper<Article>()
+                    .select("article_id", "article_content", "article_photos", "create_time")
+                    .notIn("user_id", collect));
+            if (articles == null || articles.isEmpty()) {
+                return null;
+            }
+            // 数据脱敏
+            List<ArticleVO> voList = articles.stream().map(article -> {
+                ArticleVO articleVO = new ArticleVO();
+                BeanUtils.copyProperties(article, articleVO);
+                return articleVO;
+            }).collect(Collectors.toList());
+            // 存入redis
+            redisTemplate.opsForValue().set(RedisKeyConstants.getArticleSchoolKey(userId), gson.toJson(voList));
+            return voList;
+        }
+
+        return articleVOList;
+    }
+
+    /**
+     * 查询关注用户的动态
+     *
+     * @return
+     */
+    @Override
+    public List<ArticleVO> queryArticleByAttention(Long userId) {
+        if (userId <= 0) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+        // 查询redis
+        String listStr = redisTemplate.opsForValue().get(RedisKeyConstants.getArticleAttentionKey(userId));
+        List<ArticleVO> list = gson.fromJson(listStr, new TypeToken<List<ArticleVO>>() {
+        }.getType());
+
+        if (list == null || list.isEmpty()) {
+            // redis为空，查询数据库
+            // 调用 cm-friend 模块，获取关注用户id
+            List<FriendVO> friendVOList = articleFeignClient.attentionApi(userId);
+            List<Long> ids = friendVOList.stream().map(FriendVO::getUserId).collect(Collectors.toList());
+            // 根据id批量查询动态
+            List<Article> articles = articleMapper.selectList(new QueryWrapper<Article>()
+                    .select("article_id", "article_content", "article_photos", "create_time")
+                    .in("user_id", ids));
+
+            if (articles == null || articles.isEmpty()) {
+                // 数据库为空
+                return null;
+            }
+
+            // 数据脱敏
+            List<ArticleVO> collect = articles.stream().map(article -> {
+                ArticleVO articleVO = new ArticleVO();
+                BeanUtils.copyProperties(article, articleVO);
+                return articleVO;
+            }).collect(Collectors.toList());
+            // 存入redis
+            redisTemplate.opsForValue().set(RedisKeyConstants.getArticleAttentionKey(userId), gson.toJson(collect));
+            return collect;
         }
 
         return list;

@@ -78,10 +78,11 @@ public class UserController {
 
     /**
      * 批量获取用户信息
+     * 提供给其他模块调用
      */
-    @PostMapping("/getUserInfo")
-    @ApiOperation(value = "批量获取用户信息")
-    public List<FriendVO> getUserInfo(@RequestBody List<Long> ids) {
+    @PostMapping("/getUserInfoApi")
+    @ApiOperation(value = "批量获取用户信息API")
+    public List<FriendVO> getUserInfoApi(@RequestBody List<Long> ids) {
         return userService.getUserInfo(ids);
     }
 }

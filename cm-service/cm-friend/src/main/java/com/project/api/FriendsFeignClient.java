@@ -15,6 +15,6 @@ public interface FriendsFeignClient {
      * @param ids
      * @return
      */
-    @PostMapping("/user/getUserInfo")
-    List<FriendVO> getUserInfo(@RequestBody List<Long> ids);
+    @PostMapping("/user/getUserInfoApi")
+    List<FriendVO> getUserInfoApi(@RequestBody List<Long> ids);
 }

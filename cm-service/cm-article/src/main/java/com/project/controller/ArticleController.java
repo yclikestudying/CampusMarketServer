@@ -4,6 +4,7 @@ import com.project.VO.ArticleVO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
 import com.project.service.ArticleService;
+import com.project.util.UserContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -33,4 +34,23 @@ public class ArticleController {
         return Result.success(ResultCodeEnum.SUCCESS, list);
     }
 
+    /**
+     * 查询校园动态（不包括关注的用户的动态）
+     */
+    @GetMapping("/queryArticle")
+    @ApiOperation(value = "查询校园动态")
+    public Result<List<ArticleVO>> queryArticle() {
+        List<ArticleVO> list = articleService.queryArticle(UserContext.getUserId());
+        return Result.success(ResultCodeEnum.SUCCESS, list);
+    }
+
+    /**
+     * 查询关注用户的动态
+     */
+    @GetMapping("/queryArticleByAttention")
+    @ApiOperation(value = "查询关注用户的动态")
+    public Result<List<ArticleVO>> queryArticleByAttention() {
+        List<ArticleVO> list = articleService.queryArticleByAttention(UserContext.getUserId());
+        return Result.success(ResultCodeEnum.SUCCESS, list);
+    }
 }
