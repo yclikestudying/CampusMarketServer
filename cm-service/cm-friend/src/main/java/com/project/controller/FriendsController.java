@@ -1,24 +1,17 @@
 package com.project.controller;
 
 import com.project.VO.FriendVO;
-import com.project.VO.UserVO;
-import com.project.api.FriendsFeignClient;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
-import com.project.constants.RedisKeyConstants;
 import com.project.service.FriendsService;
-import com.project.util.UserContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import javax.annotation.Resource;
-import java.util.Arrays;
 import java.util.List;
 
 @RestController

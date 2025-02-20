@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.project.VO.ArticleVO;
-import com.project.VO.LikeVO;
 import com.project.api.ArticleFeignClient;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
@@ -141,6 +140,58 @@ public class LikesServiceImpl extends ServiceImpl<LikesMapper, Likes>
         }
 
         return likeMap;
+    }
+
+    /**
+     * 根据动态id进行点赞
+     *
+     * @param userId
+     * @param articleId
+     */
+    @Override
+    public String like(Long userId, Long articleId) {
+        validateUserId(userId);
+        if (articleId <= 0) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+
+        // 查询点赞记录
+        Likes likes = likesMapper.selectOne(new QueryWrapper<Likes>()
+                .eq("article_id", articleId)
+                .eq("user_id", userId));
+        if (likes != null) {
+            return "不能重复点赞";
+        }
+
+        // 保存点赞信息
+        Likes one = new Likes();
+        one.setArticleId(articleId);
+        one.setUserId(userId);
+
+        return likesMapper.insert(one) > 0 ? "点赞成功" : "点赞失败";
+    }
+
+    @Override
+    public String unlike(Long userId, Long articleId) {
+        validateUserId(userId);
+        if (articleId <= 0) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+
+        // 查询点赞记录
+        Likes likes = likesMapper.selectOne(new QueryWrapper<Likes>()
+                .eq("article_id", articleId)
+                .eq("user_id", userId));
+        if (likes == null) {
+            return "不能取消点赞";
+        }
+
+        // 删除点赞信息
+        int delete = likesMapper.delete(new QueryWrapper<Likes>()
+                .eq("article_id", articleId)
+                .eq("user_id", userId));
+
+        return delete > 0 ? "取消点赞成功" : "取消点赞失败";
     }
 
     /**

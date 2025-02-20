@@ -1,6 +1,5 @@
 package com.project.controller;
 
-import com.project.VO.LikeVO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
 import com.project.service.LikesService;
@@ -8,10 +7,7 @@ import com.project.util.UserContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.Map;
@@ -52,5 +48,25 @@ public class LikesController {
     public Result<Map<Long, Integer>> queryLikesOfAttention() {
         Map<Long, Integer> map = likesService.queryLikesOfAttention(UserContext.getUserId());
         return Result.success(ResultCodeEnum.SUCCESS, map);
+    }
+
+    /**
+     * 根据动态id进行点赞
+     */
+    @PostMapping("/like/{articleId}")
+    @ApiOperation(value = "根据动态id进行点赞")
+    public Result<String> like(@PathVariable("articleId") Long articleId) {
+        String str = likesService.like(UserContext.getUserId(), articleId);
+        return Result.success(ResultCodeEnum.SUCCESS, str);
+    }
+
+    /**
+     * 根据动态id取消点赞
+     */
+    @PostMapping("/unlike/{articleId}")
+    @ApiOperation(value = "根据动态id取消点赞")
+    public Result<String> unlike(@PathVariable("articleId") Long articleId) {
+        String str = likesService.unlike(UserContext.getUserId(), articleId);
+        return Result.success(ResultCodeEnum.SUCCESS, str);
     }
 }

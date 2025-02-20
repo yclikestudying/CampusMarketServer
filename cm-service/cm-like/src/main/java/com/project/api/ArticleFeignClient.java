@@ -1,8 +1,6 @@
 package com.project.api;
 
 import com.project.VO.ArticleVO;
-import com.project.util.UserContext;
-import io.swagger.annotations.ApiOperation;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
