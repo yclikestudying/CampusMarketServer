@@ -6,6 +6,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.project.VO.ArticleVO;
 import com.project.VO.FriendVO;
+import com.project.api.CommentFeignClient;
 import com.project.api.FriendFeignClient;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
@@ -36,6 +37,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
     private RedisTemplate<String, String> redisTemplate;
     @Resource
     private FriendFeignClient friendFeignClient;
+    @Resource
+    private CommentFeignClient commentFeignClient;
     private final Gson gson = new Gson();
 
     /**
@@ -184,13 +187,20 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         ValidateUtil.validateSingleLongTypeParam(articleId);
 
         // 删除数据库记录
+        // 删除数据库动态
         int deletedRows = articleMapper.deleteById(articleId);
         if (deletedRows == 0) {
-            log.warn("id为{}的文章不存在", articleId);
+            log.warn("id为{}的动态不存在", articleId);
             return false;
+        }
+        // 删除动态相关联的评论
+        boolean result = commentFeignClient.deleteByArticleId(articleId);
+        if (!result) {
+            log.warn("id为{}的动态没有评论", articleId);
         }
 
         // 删除 Redis 记录
+        // 删除当前用户的缓存动态
         String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, UserContext.getUserId());
         try {
             // 开启 Redis 事务

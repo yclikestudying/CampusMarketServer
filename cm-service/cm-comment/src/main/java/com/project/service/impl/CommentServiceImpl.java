@@ -5,24 +5,24 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.project.VO.CommentVO;
-import com.project.VO.FriendVO;
 import com.project.VO.UserVO;
 import com.project.api.UserFeignClient;
 import com.project.constants.RedisKeyConstants;
 import com.project.domain.Comment;
 import com.project.mapper.CommentMapper;
 import com.project.service.CommentService;
-import com.project.util.RedisUtil;
-import com.project.util.UserContext;
 import com.project.util.ValidateUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         implements CommentService {
     @Resource
@@ -30,7 +30,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
     @Resource
     private UserFeignClient userFeignClient;
     @Resource
-    private RedisUtil redisUtil;
+    private RedisTemplate<String, String> redisTemplate;
     private final Gson gson = new Gson();
 
     /**
@@ -44,7 +44,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         // 验证参数
         ValidateUtil.validateSingleLongTypeParam(articleId);
         // 查询 Redis
-        String fromRedis = redisUtil.getFromRedis(RedisKeyConstants.ARTICLE_COMMENT, articleId);
+        String fromRedis = redisTemplate.opsForValue().get(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_COMMENT, articleId));
         List<CommentVO> commentVOList = gson.fromJson(fromRedis, new TypeToken<List<CommentVO>>() {
         }.getType());
 
@@ -69,10 +69,81 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
                 list.add(commentVO);
             });
             // 存入 Redis
-            redisUtil.saveIntoRedis(RedisKeyConstants.ARTICLE_COMMENT, articleId, gson.toJson(list));
+            redisTemplate.opsForValue().set(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_COMMENT, articleId), gson.toJson(list));
             return list;
         }
 
         return commentVOList;
+    }
+
+    /**
+     * 根据评论id删除评论
+     *
+     * @param commentId
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean deleteByCommentId(Long articleId, Long commentId) {
+        // 验证
+        ValidateUtil.validateTwoLongTypeParam(articleId, commentId);
+
+        // 删除数据库记录
+        int delete = commentMapper.deleteById(commentId);
+        if (delete == 0) {
+            log.warn("id为{}的评论不存在", commentId);
+            return false;
+        }
+
+        // 删除 Redis 记录
+        try {
+            redisTemplate.setEnableTransactionSupport(true); // 开启事务
+            redisTemplate.multi(); // 开始事务
+            redisTemplate.delete(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_COMMENT, articleId)); // 删除操作
+            redisTemplate.exec(); // 提交事务
+        } catch (Exception e) {
+            redisTemplate.discard(); // 丢弃事务
+            log.error("Redis 发生异常，操作失败");
+            throw new RuntimeException(e);
+        }
+
+        return true;
+    }
+
+    /**
+     * 根据动态id删除相关联评论
+     *
+     * @param articleId
+     * @return
+     */
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public boolean deleteByArticleId(Long articleId) {
+        // 验证
+        ValidateUtil.validateSingleLongTypeParam(articleId);
+
+        // 删除数据库记录
+        int delete = commentMapper.delete(new QueryWrapper<Comment>().eq("article_id", articleId));
+        if (delete == 0) {
+            log.warn("id为{}的评论不存在", articleId);
+            return false;
+        }
+
+        // 删除 Redis 记录
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_COMMENT, articleId);
+        try {
+            // 开启 Redis 事务
+            redisTemplate.setEnableTransactionSupport(true); // 启用事务支持
+            redisTemplate.multi(); // 开始事务
+            redisTemplate.delete(redisKey); // 删除操作
+            redisTemplate.exec(); // 提交事务
+        } catch (Exception e) {
+            // Redis 操作失败，回滚 Redis 事务
+            redisTemplate.discard(); // 丢弃事务
+            log.error("Redis 发生异常，操作失败");
+            throw new RuntimeException(e);
+        }
+
+        return true;
     }
 }
