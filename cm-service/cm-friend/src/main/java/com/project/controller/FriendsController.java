@@ -4,6 +4,7 @@ import com.project.VO.FriendVO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
 import com.project.service.FriendsService;
+import com.project.util.UserContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
@@ -56,5 +57,40 @@ public class FriendsController {
         log.info("查询互关用户，参数:{}", userId);
         List<FriendVO> list = friendsService.attentionAndFans(userId);
         return Result.success(ResultCodeEnum.SUCCESS, list);
+    }
+
+    /**
+     * 查询我的关注数量
+     *
+     * @return
+     */
+    @GetMapping("/attentionCount")
+    @ApiOperation(value = "查询我的关注数量")
+    public Result<Integer> attentionCount(@RequestParam(value = "userId", required = false) Long userId) {
+        log.info("查询我的关注数量");
+        Integer count = friendsService.attentionCount(userId);
+        return Result.success(ResultCodeEnum.SUCCESS, count);
+    }
+
+    /**
+     * 查询我的粉丝数量
+     */
+    @GetMapping("/fansCount")
+    @ApiOperation(value = "查询我的粉丝数量")
+    public Result<Integer> fansCount(@RequestParam(value = "userId", required = false) Long userId) {
+        log.info("查询我的粉丝数量");
+        Integer count = friendsService.fansCount(userId);
+        return Result.success(ResultCodeEnum.SUCCESS, count);
+    }
+
+    /**
+     * 查询互关用户数量
+     */
+    @GetMapping("/attentionAndFansCount")
+    @ApiOperation(value = "查询互关用户数量")
+    public Result<Integer> attentionAndFansCount() {
+        log.info("查询互关用户数量");
+        Integer count = friendsService.attentionAndFansCount(UserContext.getUserId());
+        return Result.success(ResultCodeEnum.SUCCESS, count);
     }
 }

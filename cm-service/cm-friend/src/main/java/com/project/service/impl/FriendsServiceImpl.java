@@ -13,11 +13,14 @@ import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.FriendsMapper;
 import com.project.service.FriendsService;
 import com.project.util.UserContext;
+import com.project.util.ValidateUtil;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -141,6 +144,103 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
         }
 
         return list;
+    }
+
+    /**
+     * 查询我的关注数量
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public Integer attentionCount(Long id) {
+        Long userId = getUserId(id);
+        // 验证
+        ValidateUtil.validateSingleLongTypeParam(userId);
+
+        // 查询 Redis 记录
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ATTENTION_COUNT, userId);
+        String str = redisTemplate.opsForValue().get(redisKey);
+        Integer count = gson.fromJson(str, Integer.class);
+        if (count == null) {
+            // Redis 为空，查询数据库
+            Integer friendCount = friendsMapper.selectCount(new QueryWrapper<Friends>().eq("follower_id", userId));
+            // 存入 Redis
+            redisTemplate.opsForValue().set(redisKey, gson.toJson(friendCount), 24, TimeUnit.HOURS);
+            return friendCount;
+        }
+
+        return count;
+    }
+
+    /**
+     * 查询我的粉丝数量
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public Integer fansCount(Long id) {
+        Long userId = getUserId(id);
+        ValidateUtil.validateSingleLongTypeParam(userId);
+
+        // 查询 Redis 记录
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.FANS_COUNT, userId);
+        String str = redisTemplate.opsForValue().get(redisKey);
+        Integer count = gson.fromJson(str, Integer.class);
+        if (count == null) {
+            // Redis 为空，查询数据库
+            Integer friendCount = friendsMapper.selectCount(new QueryWrapper<Friends>().eq("followee_id", userId));
+            // 存入 Redis
+            redisTemplate.opsForValue().set(redisKey, gson.toJson(friendCount), 24, TimeUnit.HOURS);
+            return friendCount;
+        }
+
+        return count;
+    }
+
+    /**
+     * 查询互关用户数量
+     *
+     * @param userId
+     * @return
+     */
+    @Override
+    public Integer attentionAndFansCount(Long userId) {
+        // 验证
+        ValidateUtil.validateSingleLongTypeParam(userId);
+
+        // 查询 Redis 记录
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ATTENTIONFANS_COUNT, userId);
+        String str = redisTemplate.opsForValue().get(redisKey);
+        Integer count = gson.fromJson(str, Integer.class);
+        if (count == null) {
+            // Redis 为空，查询数据库
+            // 查询我的关注用户
+            List<Friends> friendsList = friendsMapper.selectList(new QueryWrapper<Friends>().select("followee_id").eq("follower_id", userId));
+            List<Long> collect = null;
+            if (friendsList != null && !friendsList.isEmpty()) {
+                collect = friendsList.stream().map(Friends::getFolloweeId).collect(Collectors.toList());
+            }
+            // 查询我的粉丝
+            List<Friends> friendsList1 = friendsMapper.selectList(new QueryWrapper<Friends>().select("follower_id").eq("followee_id", userId));
+            List<Long> collect1 = null;
+            if (friendsList1 != null && !friendsList1.isEmpty()) {
+                collect1 = friendsList1.stream().map(Friends::getFollowerId).collect(Collectors.toList());
+            }
+            // 交集
+            Integer attentionFansCount = null;
+            if (collect == null || collect1 == null) {
+                attentionFansCount = 0;
+            } else {
+                collect.retainAll(collect1);
+                attentionFansCount = collect.size();
+            }
+            // 存入 Redis
+            redisTemplate.opsForValue().set(redisKey, gson.toJson(attentionFansCount), 24, TimeUnit.HOURS);
+            return attentionFansCount;
+        }
+        return count;
     }
 
     private Long getUserId(Long id) {

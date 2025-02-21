@@ -15,4 +15,13 @@ public interface FriendsService extends IService<Friends> {
 
     // 查询互关用户
     List<FriendVO> attentionAndFans(Long id);
+
+    // 查询我的关注数量
+    Integer attentionCount(Long userId);
+
+    // 查询我的粉丝数量
+    Integer fansCount(Long userId);
+
+    // 查询互关用户数量
+    Integer attentionAndFansCount(Long userId);
 }

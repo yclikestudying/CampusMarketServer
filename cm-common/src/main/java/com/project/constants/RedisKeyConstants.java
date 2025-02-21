@@ -16,6 +16,9 @@ public class RedisKeyConstants {
     public static final String LIKE_ATTENTION = "like:attention:"; // 关注用户动态的点赞前缀
     public static final String ARTICLE_COMMENT = "article:comment:"; // 动态评论前缀
     public static final String ARTICLE_COUNT = "article:count:"; // 动态数量前缀
+    public static final String ATTENTION_COUNT = "attention:count:"; // 关注数量前缀
+    public static final String FANS_COUNT = "fans:count:"; // 粉丝数量前缀
+    public static final String ATTENTIONFANS_COUNT = "attentionfans:count:"; // 互关数量前缀
 
     // 生成用户 Token 的 Key
     public static String getUserTokenKey(Long userId) {
