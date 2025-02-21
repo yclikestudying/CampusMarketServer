@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -216,6 +217,33 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
         }
 
         return true;
+    }
+
+    /**
+     * 查询动态数量
+     *
+     * @param userId
+     * @return
+     */
+    @Override
+    public Integer articleCount(Long userId) {
+        // 验证参数
+        ValidateUtil.validateSingleLongTypeParam(userId);
+
+        // 查询 Redis 记录
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_COUNT, userId);
+        String str = redisTemplate.opsForValue().get(redisKey);
+        Integer count = gson.fromJson(str, Integer.class);
+
+        if (count == null) {
+            // Redis 为空，查询数据库
+            Integer articleCount = articleMapper.selectCount(new QueryWrapper<Article>().eq("user_id", userId));
+            // 存入 Redis
+            redisTemplate.opsForValue().set(redisKey, gson.toJson(articleCount), 24, TimeUnit.HOURS);
+            return articleCount;
+        }
+
+        return count;
     }
 
     private Long getUserId(Long id) {

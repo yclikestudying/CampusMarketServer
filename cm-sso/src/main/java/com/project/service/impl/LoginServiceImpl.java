@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.project.DTO.PhoneDTO;
+import com.project.VO.UserVO;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
 import com.project.domain.User;
@@ -14,13 +15,16 @@ import com.project.service.LoginService;
 import com.project.util.LoginUtil;
 import com.project.util.MD5Util;
 import com.project.util.TokenUtil;
+import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
@@ -67,9 +71,13 @@ public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
         // token存入redis
         redisTemplate.opsForValue().set(RedisKeyConstants.getUserTokenKey(user.getUserId()), token);
         // 用户信息存入redis
-        redisTemplate.opsForValue().set(RedisKeyConstants.getUserInfoKey(user.getUserId()), gson.toJson(user));
-
-        return Collections.singletonMap("token", token);
+        redisTemplate.opsForValue().set(RedisKeyConstants.getUserInfoKey(user.getUserId()), gson.toJson(user), 24, TimeUnit.HOURS);
+        UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(user, userVO);
+        Map<String, Object> map = new HashMap<>();
+        map.put("token", token);
+        map.put("user", userVO);
+        return map;
     }
 
     /**

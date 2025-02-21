@@ -63,4 +63,17 @@ public class ArticleController {
         boolean result = articleService.deleteByArticleId(articleId);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
     }
+
+    /**
+     * 查询动态数量
+     *
+     * @return
+     */
+    @GetMapping("/articleCount")
+    @ApiOperation(value = "查询动态数量")
+    public Result<Integer> articleCount() {
+        log.info("查询动态数量");
+        Integer count = articleService.articleCount(UserContext.getUserId());
+        return Result.success(ResultCodeEnum.SUCCESS, count);
+    }
 }

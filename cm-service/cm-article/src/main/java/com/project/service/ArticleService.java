@@ -18,4 +18,7 @@ public interface ArticleService extends IService<Article> {
 
     // 根据动态id删除动态
     boolean deleteByArticleId(Long articleId);
+
+    // 查询动态数量
+    Integer articleCount(Long userId);
 }
