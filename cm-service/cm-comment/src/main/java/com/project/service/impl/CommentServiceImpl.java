@@ -4,13 +4,19 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.project.VO.ArticleVO;
 import com.project.VO.CommentVO;
 import com.project.VO.UserVO;
+import com.project.api.ArticleFeignClient;
 import com.project.api.UserFeignClient;
+import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
+import com.project.domain.Article;
 import com.project.domain.Comment;
+import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.CommentMapper;
 import com.project.service.CommentService;
+import com.project.util.UserContext;
 import com.project.util.ValidateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -18,8 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -29,6 +36,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
     private CommentMapper commentMapper;
     @Resource
     private UserFeignClient userFeignClient;
+    @Resource
+    private ArticleFeignClient articleFeignClient;
     @Resource
     private RedisTemplate<String, String> redisTemplate;
     private final Gson gson = new Gson();
@@ -145,5 +154,51 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         }
 
         return true;
+    }
+
+    /**
+     * 获取自己动态的评论数
+     * 根据是否传入id判断是自己的评论数还是别人的评论数
+     *
+     * @param id
+     * @return
+     */
+    @Override
+    public Map<Long, Integer> queryCommentCount(Long id) {
+        // 验证是查询自己的还是其他用户的评论数
+        Long userId = id == null ? UserContext.getUserId() : id;
+        if (userId <= 0) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+
+        // 查询 Redis 记录
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.COMMENT_USER, userId);
+        String str = redisTemplate.opsForValue().get(redisKey);
+        Map<Long, Integer> commentMap = gson.fromJson(str, new TypeToken<Map<Long, Integer>>() {
+        }.getType());
+        if (commentMap == null || commentMap.isEmpty()) {
+            // Redis 为空，查询数据库
+            // 调用 cm-article 模块，查询自己的动态
+            List<ArticleVO> list = articleFeignClient.queryArticleByUserIdApi(userId);
+            List<Long> collect = null;
+            if (list != null && !list.isEmpty()) {
+                // 获取动态id
+                collect = list.stream().map(ArticleVO::getArticleId).collect(Collectors.toList());
+            }
+            // 根据每个id查询评论数
+            Map<Long, Integer> map = new HashMap<>();
+            if (collect != null && !collect.isEmpty()) {
+                collect.forEach(articleId -> {
+                    Integer count = commentMapper.selectCount(new QueryWrapper<Comment>().eq("article_id", articleId));
+                    map.put(articleId, count);
+                });
+            }
+            // 存入 Redis
+            redisTemplate.opsForValue().set(redisKey, gson.toJson(map), 24, TimeUnit.HOURS);
+            return map;
+        }
+
+
+        return commentMap;
     }
 }

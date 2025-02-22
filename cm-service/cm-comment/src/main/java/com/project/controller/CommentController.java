@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/comment")
@@ -44,5 +45,19 @@ public class CommentController {
     public Result<String> deleteByCommentId(@RequestParam("articleId") Long articleId, @RequestParam("commentId") Long commentId) {
         boolean result = commentService.deleteByCommentId(articleId, commentId);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
+    }
+
+    /**
+     * 获取自己动态的评论数
+     * 根据是否传入id判断是自己的评论数还是别人的评论数
+     *
+     * @param userId
+     * @return
+     */
+    @GetMapping("/queryCommentCount")
+    @ApiOperation(value = "获取自己动态的评论数")
+    public Result<Map<Long, Integer>> queryCommentCount(@RequestParam(value = "userId", required = false) Long userId) {
+        Map<Long, Integer> map = commentService.queryCommentCount(userId);
+        return Result.success(ResultCodeEnum.SUCCESS, map);
     }
 }
