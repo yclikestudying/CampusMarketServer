@@ -12,6 +12,7 @@ import com.project.domain.Friends;
 import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.FriendsMapper;
 import com.project.service.FriendsService;
+import com.project.util.RedisUtil;
 import com.project.util.UserContext;
 import com.project.util.ValidateUtil;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -32,43 +33,44 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
     private RedisTemplate<String, String> redisTemplate;
     @Resource
     private UserFeignClient userFeignClient;
+    @Resource
+    private RedisUtil redisUtil;
     private final Gson gson = new Gson();
 
     /**
      * 查询我的关注
-     *
-     * @param id 用户id
-     * @return
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据
+     * - List<FriendVO> 用户列表
      */
     @Override
     public List<FriendVO> attention(Long id) {
         // 验证id
-        Long userId = getUserId(id);
-        if (userId <= 0) {
-            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
-        }
+        Long userId = ValidateUtil.validateUserId(id);
+        ValidateUtil.validateSingleLongTypeParam(id);
 
-        // 查询redis
-        String attention = redisTemplate.opsForValue().get(RedisKeyConstants.getUserAttentionKey(userId));
-        List<FriendVO> list = gson.fromJson(attention, new TypeToken<List<FriendVO>>() {
+        // 查询 Redis 记录
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_ATTENTION, userId);
+        String redisData = redisUtil.getRedisData(redisKey);
+        List<FriendVO> list = gson.fromJson(redisData, new TypeToken<List<FriendVO>>() {
         }.getType());
         if (list == null || list.isEmpty()) {
-            // redis为空，查询数据库
+            // Redis 为空，查询数据库
             List<Friends> friendsList = friendsMapper.selectList(new QueryWrapper<Friends>().eq("follower_id", userId));
             if (friendsList == null || friendsList.isEmpty()) {
                 return null;
-            } else {
-                // 调用 cm-user 模块，获取用户信息
-                List<FriendVO> friendList = null;
-                try {
-                    friendList = userFeignClient.getUserInfoApi(friendsList.stream().map(Friends::getFolloweeId).collect(Collectors.toList()));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                // 存入redis
-                redisTemplate.opsForValue().set(RedisKeyConstants.getUserAttentionKey(userId), gson.toJson(friendList));
-                return friendList;
             }
+            // 调用 cm-user 模块，获取用户信息
+            List<FriendVO> friendList = null;
+            try {
+                friendList = userFeignClient.getUserBatch(friendsList.stream().map(Friends::getFolloweeId).collect(Collectors.toList()));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            // 存入redis
+            redisUtil.setRedisData(redisKey, gson.toJson(friendList));
+            return friendList;
         }
 
         return list;
@@ -100,7 +102,7 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
                 return null;
             } else {
                 // 调用 cm-user 模块，获取用户信息
-                List<FriendVO> friendVOList = userFeignClient.getUserInfoApi(friendsList.stream().map(Friends::getFollowerId).collect(Collectors.toList()));
+                List<FriendVO> friendVOList = userFeignClient.getUserBatch(friendsList.stream().map(Friends::getFollowerId).collect(Collectors.toList()));
                 // 存入redis
                 redisTemplate.opsForValue().set(RedisKeyConstants.getUserFansKey(userId), gson.toJson(friendVOList));
                 return friendVOList;
@@ -137,7 +139,7 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
             // 获取交集
             attentionList.retainAll(fansList);
             // 调用 cm-user 模块，获取用户信息
-            List<FriendVO> friendVOList = userFeignClient.getUserInfoApi(attentionList.stream().map(FriendVO::getUserId).collect(Collectors.toList()));
+            List<FriendVO> friendVOList = userFeignClient.getUserBatch(attentionList.stream().map(FriendVO::getUserId).collect(Collectors.toList()));
             // 存入redis
             redisTemplate.opsForValue().set(RedisKeyConstants.getUserAttentionAndFansKey(userId), gson.toJson(friendVOList));
             return friendVOList;
@@ -241,6 +243,32 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
             return attentionFansCount;
         }
         return count;
+    }
+
+    /**
+     * 查询校园用户
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据
+     * - List<FriendVO> 用户列表
+     */
+    @Override
+    public List<FriendVO> school(Long userId) {
+        // 验证
+        userId = ValidateUtil.validateUserId(userId);
+        ValidateUtil.validateSingleLongTypeParam(userId);
+
+        // 获取我的关注
+        List<Friends> friendsList = friendsMapper.selectList(new QueryWrapper<Friends>().eq("follower_id", userId));
+        // 获取我的关注用户的id
+        List<Long> userIdList = friendsList.stream().map(Friends::getFolloweeId).collect(Collectors.toList());
+        // 加上我自己的id
+        userIdList.add(userId);
+
+
+
+
+        return null;
     }
 
     private Long getUserId(Long id) {

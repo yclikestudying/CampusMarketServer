@@ -25,14 +25,14 @@ public class FriendsController {
 
     /**
      * 查询我的关注
-     *
-     * @param userId 用户id
-     * @return
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据
+     * - List<FriendVO> 用户列表
      */
     @GetMapping("/attention")
     @ApiOperation(value = "查询关注用户")
     public Result<List<FriendVO>> attention(@RequestParam(value = "userId", required = false) Long userId) {
-        log.info("查询我的关注，参数:{}", userId);
         List<FriendVO> attention = friendsService.attention(userId);
         return Result.success(ResultCodeEnum.SUCCESS, attention);
     }

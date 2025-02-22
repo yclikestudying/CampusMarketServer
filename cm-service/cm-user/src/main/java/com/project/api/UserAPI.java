@@ -1,40 +1,58 @@
 package com.project.api;
 
 import com.project.VO.FriendVO;
-import com.project.VO.UserVO;
-import com.project.common.Result;
-import com.project.common.ResultCodeEnum;
+import com.project.VO.article.ArticleUserVO;
+import com.project.VO.user.UserInfoVO;
+import com.project.domain.User;
 import com.project.service.UserService;
-import com.project.util.UserContext;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import java.util.List;
-import java.util.Objects;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/api/user")
 @Slf4j
 public class UserAPI {
     @Resource
     private UserService userService;
 
     /**
-     * 根据用户id查询用户信息
+     * 查询用户信息
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - userId 用户id
+     * - userName 用户名称
+     * - userAvatar 用户头像
      */
-    @GetMapping("/getUserInfoByUserIdApi")
-    public UserVO getUserInfoByUserIdApi(@RequestParam(value = "userId") Long userId) {
-        return userService.getUserInfoByUserId(userId);
+    @GetMapping("/getUserInfo")
+    public UserInfoVO getUserInfo(@RequestParam("userId") Long userId) {
+        return userService.getUserInfo(userId);
     }
 
     /**
-     * 批量获取用户信息
+     * 批量查询用户信息（动态相关的用户查询）
+     * 请求数据:
+     * - List<Long> 用户id集合
+     * 响应数据:
+     * - List<ArticleUserVO> 用户信息集合
      */
-    @PostMapping("/getUserInfoApi")
-    public List<FriendVO> getUserInfoApi(@RequestBody List<Long> ids) {
-        return userService.getUserInfo(ids);
+    @PostMapping("/getUserInfoBatch")
+    public List<ArticleUserVO> getUserInfoBatch(@RequestBody List<Long> userIds) {
+        return userService.getUserInfoBatch(userIds);
+    }
+
+    /**
+     * 批量查询用户信息（关注相关的用户查询）
+     * 请求数据:
+     * - List<Long> 用户id集合
+     * 响应数据:
+     * - List<FriendVO> 用户信息集合
+     */
+    @PostMapping("/getUserBatch")
+    public List<FriendVO> getUserBatch(@RequestBody List<Long> userIds) {
+        return userService.getUserBatch(userIds);
     }
 }

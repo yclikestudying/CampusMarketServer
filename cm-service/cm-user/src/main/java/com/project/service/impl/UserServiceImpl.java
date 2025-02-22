@@ -5,80 +5,82 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.project.VO.FriendVO;
-import com.project.VO.UserVO;
+import com.project.VO.article.ArticleUserVO;
+import com.project.VO.user.UserInfoVO;
+import com.project.VO.user.UserVO;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
+import com.project.domain.Friends;
 import com.project.domain.User;
 import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.UserMapper;
 import com.project.service.UserService;
-import com.project.util.TokenUtil;
-import com.project.util.UploadAvatar;
-import com.project.util.UserContext;
+import com.project.util.*;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
     @Resource
     private UserMapper userMapper;
     @Resource
-    private RedisTemplate<String, String> redisTemplate;
+    private RedisUtil redisUtil;
 
     private final Gson gson = new Gson();
 
     /**
-     * 根据id查询用户信息
-     *
-     * @param id 用户id
-     * @return
+     * 查询用户信息
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - userVO 用户信息
      */
     @Override
     public UserVO getUserInfoByUserId(Long id) {
-        // 验证id
-        Long userId = getUserId(id);
-        if (userId <= 0) {
-            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
-        }
+        // 验证参数
+        Long userId = ValidateUtil.validateUserId(id);
+        ValidateUtil.validateSingleLongTypeParam(userId);
 
-        // redis查询
-        String userStr = redisTemplate.opsForValue().get(RedisKeyConstants.getUserInfoKey(userId));
-        UserVO userVO = gson.fromJson(userStr, UserVO.class);
+        // 查询 Redis 记录
+        String infoKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_INFO, userId);
+        String redisData = redisUtil.getRedisData(infoKey);
+        UserVO userVO = gson.fromJson(redisData, UserVO.class);
         if (userVO == null) {
-            // redis为空，查询数据库
+            // Redis 为空，查询数据库
             User user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id", userId));
             if (user == null) {
                 throw new BusinessExceptionHandler(200, "用户不存在");
             }
             userVO = new UserVO();
             BeanUtils.copyProperties(user, userVO);
-            // 存入redis
-            redisTemplate.opsForValue().set(RedisKeyConstants.getUserInfoKey(userId), gson.toJson(userVO));
+            // 存入 Redis
+            redisUtil.setRedisData(infoKey, gson.toJson(userVO));
         }
 
         return userVO;
     }
 
     /**
-     * 修改用户信息
-     *
-     * @param userId
-     * @param map
-     * @return
+     * 修改用户个人信息
+     * 请求数据:
+     * - key 键值
+     * - value 值
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updateUser(Long userId, Map<String, Object> map) {
         // 获取要修改的参数名和参数值
@@ -157,25 +159,24 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
         // 修改数据库数据
         int result = userMapper.update(user, updateWrapper);
-
-        // 删除redis缓存
-        Boolean delete = redisTemplate.delete(RedisKeyConstants.getUserInfoKey(userId));
-
-        if (result <= 0 || delete == null || !delete) {
-            throw new BusinessExceptionHandler(200, "数据库操作失败");
+        if (result == 0) {
+            log.error("用户信息修改失败");
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(200)));
         }
+
+        // 开启 Redis 事务进行操作
+        String infoKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_INFO, userId);
+        redisUtil.redisTransaction(infoKey);
 
         return true;
     }
 
     /**
-     * 修改用户头像
-     *
-     * @param userId 用户id
-     * @param file   文件
-     * @return
+     * 修改用户个人头像
+     * 请求数据:
+     * - file 图片二进制数据
      */
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public boolean updateAvatar(Long userId, MultipartFile file) {
         // 验证参数
@@ -184,7 +185,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
 
         // 上传照片到阿里云服务器，并返回新的访问地址
-        String newLink = null;
+        String newLink;
         try {
             newLink = UploadAvatar.uploadAvatar(file, "avatar");
         } catch (IOException e) {
@@ -196,50 +197,87 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         user.setUserId(userId);
         user.setUserAvatar(newLink);
         int result = userMapper.updateById(user);
-
-        // 删除redis缓存
-        Boolean delete = redisTemplate.delete(RedisKeyConstants.getUserInfoKey(userId));
-
-        if (result <= 0 || delete == null || !delete) {
-            throw new BusinessExceptionHandler(200, "数据库操作失败");
+        if (result == 0) {
+            log.error("头像修改失败");
+            return false;
         }
+
+        // 开启 Redis 事务进行操作
+        String infoKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_INFO, userId);
+        redisUtil.redisTransaction(infoKey);
 
         return true;
     }
 
     /**
-     * 批量查询用户
-     *
-     * @param ids
-     * @return
+     * 查询用户信息
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - userId 用户id
+     * - userName 用户名称
+     * - userAvatar 用户头像
      */
     @Override
-    public List<FriendVO> getUserInfo(List<Long> ids) {
-        // 验证
-        if (ids.isEmpty()) {
-            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
-        }
+    public UserInfoVO getUserInfo(Long userId) {
+        // 验证参数
+        ValidateUtil.validateSingleLongTypeParam(userId);
 
-        // 查询
-        List<User> users = userMapper.selectBatchIds(ids);
-        if (users != null && !users.isEmpty()) {
-            // 脱敏
-            return users.stream().map(user -> {
-                FriendVO friendVO = new FriendVO();
-                friendVO.setUserId(user.getUserId());
-                friendVO.setUserAvatar(user.getUserAvatar());
-                friendVO.setUserName(user.getUserName());
-                friendVO.setUserProfile(user.getUserProfile());
-                return friendVO;
-            }).collect(Collectors.toList());
-        }
+        // 查询数据库记录
+        User user = userMapper.selectOne(new QueryWrapper<User>()
+                .select("user_id", "user_avatar", "user_name")
+                .eq("user_id", userId));
 
+        UserInfoVO userInfoVO = new UserInfoVO();
+        BeanUtils.copyProperties(user, userInfoVO);
+        return userInfoVO;
+    }
+
+    /**
+     * 批量查询用户信息
+     * 请求数据:
+     * - List<Long> 用户id集合
+     * 响应数据:
+     * - List<ArticleUserVO> 用户信息集合
+     */
+    @Override
+    public List<ArticleUserVO> getUserInfoBatch(List<Long> userIds) {
+        List<ArticleUserVO> articleUserVOList = new ArrayList<>();
+        if (userIds != null && !userIds.isEmpty()) {
+            List<User> users = userMapper.selectBatchIds(userIds);
+            if (users != null && !users.isEmpty()) {
+                users.forEach(user -> {
+                    ArticleUserVO articleUserVO = new ArticleUserVO();
+                    BeanUtils.copyProperties(user, articleUserVO);
+                    articleUserVOList.add(articleUserVO);
+                });
+                return articleUserVOList;
+            }
+        }
         return null;
     }
 
-    private Long getUserId(Long id) {
-        // id存在，查询别人的信息
-        // id不存在，查询自己的信息
-        return id == null ? UserContext.getUserId() : id;
+    /**
+     * 批量查询用户信息（关注相关的用户查询）
+     * 请求数据:
+     * - List<Long> 用户id集合
+     * 响应数据:
+     * - List<FriendVO> 用户信息集合
+     */
+    @Override
+    public List<FriendVO> getUserBatch(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+
+        List<FriendVO> friendVOList = new ArrayList<>();
+        // 查询数据库记录
+        List<User> users = userMapper.selectBatchIds(userIds);
+        users.forEach(user -> {
+            FriendVO friendVO = new FriendVO();
+            BeanUtils.copyProperties(user, friendVO);
+            friendVOList.add(friendVO);
+        });
+        return friendVOList;
     }
 }

@@ -16,7 +16,8 @@ public class FeignTokenInterceptor implements RequestInterceptor {
 
     @Override
     public void apply(RequestTemplate template) {
-        String token = redisTemplate.opsForValue().get(RedisKeyConstants.getUserTokenKey(UserContext.getUserId()));
+        String tokenKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_TOKEN, UserContext.getUserId());
+        String token = redisTemplate.opsForValue().get(tokenKey);
         if (token != null) {
             template.header("Authorization", token); // 将Token添加到请求头中
         }

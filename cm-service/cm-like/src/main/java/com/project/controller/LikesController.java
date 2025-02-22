@@ -19,36 +19,36 @@ import java.util.Map;
 public class LikesController {
     @Resource
     private LikesService likesService;
-
-    /**
-     * 获取自己的动态的点赞
-     */
-    @GetMapping("/queryLikesOfUser")
-    @ApiOperation(value = "获取自己的动态的点赞")
-    public Result<Map<Long, Integer>> queryLikesOfUser(@RequestParam(value = "userId", required = false) Long id) {
-        Map<Long, Integer> map = likesService.queryLikesOfUser(id);
-        return Result.success(ResultCodeEnum.SUCCESS, map);
-    }
-
-    /**
-     * 获取校园动态的点赞
-     */
-    @GetMapping("/queryLikesOfCampus")
-    @ApiOperation(value = "获取校园动态的点赞")
-    public Result<Map<Long, Integer>> queryLikesOfCampus() {
-        Map<Long, Integer> map = likesService.queryLikesOfCampus(UserContext.getUserId());
-        return Result.success(ResultCodeEnum.SUCCESS, map);
-    }
-
-    /**
-     * 获取关注用户动态的点赞
-     */
-    @GetMapping("/queryLikesOfAttention")
-    @ApiOperation(value = "获取关注用户动态的点赞")
-    public Result<Map<Long, Integer>> queryLikesOfAttention() {
-        Map<Long, Integer> map = likesService.queryLikesOfAttention(UserContext.getUserId());
-        return Result.success(ResultCodeEnum.SUCCESS, map);
-    }
+//
+//    /**
+//     * 获取自己的动态的点赞数
+//     */
+//    @GetMapping("/queryLikesOfUser")
+//    @ApiOperation(value = "获取自己的动态的点赞数")
+//    public Result<Map<Long, Integer>> queryLikesOfUser(@RequestParam(value = "userId", required = false) Long id) {
+//        Map<Long, Integer> map = likesService.queryLikesOfUser(id);
+//        return Result.success(ResultCodeEnum.SUCCESS, map);
+//    }
+//
+//    /**
+//     * 获取校园动态的点赞数
+//     */
+//    @GetMapping("/queryLikesOfCampus")
+//    @ApiOperation(value = "获取校园动态的点赞数")
+//    public Result<Map<Long, Integer>> queryLikesOfCampus() {
+//        Map<Long, Integer> map = likesService.queryLikesOfCampus(UserContext.getUserId());
+//        return Result.success(ResultCodeEnum.SUCCESS, map);
+//    }
+//
+//    /**
+//     * 获取关注用户动态的点赞数
+//     */
+//    @GetMapping("/queryLikesOfAttention")
+//    @ApiOperation(value = "获取关注用户动态的点赞数")
+//    public Result<Map<Long, Integer>> queryLikesOfAttention() {
+//        Map<Long, Integer> map = likesService.queryLikesOfAttention(UserContext.getUserId());
+//        return Result.success(ResultCodeEnum.SUCCESS, map);
+//    }
 
     /**
      * 根据动态id进行点赞

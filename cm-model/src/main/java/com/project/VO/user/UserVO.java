@@ -1,4 +1,4 @@
-package com.project.VO;
+package com.project.VO.user;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -7,6 +7,9 @@ import lombok.Data;
 
 import java.util.Date;
 
+/**
+ * 用户完整信息
+ */
 @Data
 public class UserVO {
     /**

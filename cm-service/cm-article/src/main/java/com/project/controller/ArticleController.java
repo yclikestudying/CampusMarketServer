@@ -1,6 +1,6 @@
 package com.project.controller;
 
-import com.project.VO.ArticleVO;
+import com.project.VO.article.ArticleVO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
 import com.project.service.ArticleService;
@@ -22,58 +22,44 @@ public class ArticleController {
     private ArticleService articleService;
 
     /**
-     * 根据用户id查询动态
+     * 查询用户所有动态信息
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - list 集合
      */
     @GetMapping("/queryArticleByUserId")
-    @ApiOperation(value = "根据用户id查询动态")
+    @ApiOperation(value = "查询用户所有动态信息")
     public Result<List<ArticleVO>> queryArticleByUserId(@RequestParam(value = "userId", required = false) Long userId) {
         List<ArticleVO> list = articleService.queryArticleByUserId(userId);
         return Result.success(ResultCodeEnum.SUCCESS, list);
     }
 
     /**
-     * 查询校园动态（不包括关注的用户的动态）
+     * 查询关注用户所有动态信息
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - list 集合
      */
-    @GetMapping("/queryArticle")
-    @ApiOperation(value = "查询校园动态")
-    public Result<List<ArticleVO>> queryArticle() {
-        List<ArticleVO> list = articleService.queryArticle(UserContext.getUserId());
+    @GetMapping("/queryArticleOfAttention")
+    @ApiOperation(value = "查询关注用户所有动态信息")
+    public Result<List<ArticleVO>> queryArticleOfAttention() {
+        List<ArticleVO> list = articleService.queryArticleOfAttention(UserContext.getUserId());
         return Result.success(ResultCodeEnum.SUCCESS, list);
     }
 
     /**
-     * 查询关注用户的动态
+     * 查询校园所有动态信息
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - list 集合
      */
-    @GetMapping("/queryArticleByAttention")
-    @ApiOperation(value = "查询关注用户的动态")
-    public Result<List<ArticleVO>> queryArticleByAttention() {
-        List<ArticleVO> list = articleService.queryArticleByAttention(UserContext.getUserId());
+    @GetMapping("/queryArticleOfSchool")
+    @ApiOperation(value = "查询校园所有动态信息")
+    public Result<List<ArticleVO>> queryArticleOfSchool() {
+        List<ArticleVO> list = articleService.queryArticleOfSchool(UserContext.getUserId());
         return Result.success(ResultCodeEnum.SUCCESS, list);
-    }
-
-    /**
-     * 根据动态id删除动态
-     *
-     * @param articleId
-     * @return
-     */
-    @DeleteMapping("/deleteByArticleId")
-    @ApiOperation(value = "根据动态id删除动态")
-    public Result<String> deleteByArticleId(@RequestParam("articleId") Long articleId) {
-        boolean result = articleService.deleteByArticleId(articleId);
-        return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
-    }
-
-    /**
-     * 查询动态数量
-     *
-     * @return
-     */
-    @GetMapping("/articleCount")
-    @ApiOperation(value = "查询动态数量")
-    public Result<Integer> articleCount() {
-        log.info("查询动态数量");
-        Integer count = articleService.articleCount(UserContext.getUserId());
-        return Result.success(ResultCodeEnum.SUCCESS, count);
     }
 }

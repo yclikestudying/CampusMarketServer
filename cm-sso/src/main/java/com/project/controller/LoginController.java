@@ -22,29 +22,33 @@ public class LoginController {
     private LoginService loginService;
 
     /**
-     * 用户手机登录
-     *
-     * @param phoneDTO 登录信息
-     * @return
+     * 手机登录
+     * 请求数据:
+     * - phone 手机号
+     * - password 密码
+     * 响应数据:
+     * - token 身份标识
+     * - user 用户完整信息
      */
     @PostMapping("/phoneLogin")
-    @ApiOperation(value = "用户手机登录")
+    @ApiOperation(value = "手机登录")
     public Result<Map<String, Object>> login(@RequestBody PhoneDTO phoneDTO) {
-        log.info("用户登录，请求参数:{}", phoneDTO);
+        log.info("手机登录");
         Map<String, Object> map = loginService.phoneLogin(phoneDTO);
         return Result.success(ResultCodeEnum.SUCCESS, map);
     }
 
     /**
-     * 用户手机注册
-     *
-     * @param phoneDTO 注册信息
-     * @return
+     * 手机注册
+     * 请求数据:
+     * - phone 手机号
+     * - password 密码
+     * - checkPassword 校验密码
      */
     @PostMapping("/phoneRegister")
     @ApiOperation(value = "用户手机注册")
     public Result<String> register(@RequestBody PhoneDTO phoneDTO) {
-        log.info("用户注册，请求参数:{}", phoneDTO);
+        log.info("手机注册");
         boolean result = loginService.phoneRegister(phoneDTO);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.success(ResultCodeEnum.FAIL);
     }

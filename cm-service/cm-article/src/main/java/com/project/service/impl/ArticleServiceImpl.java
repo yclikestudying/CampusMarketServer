@@ -4,28 +4,34 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.project.VO.ArticleVO;
 import com.project.VO.FriendVO;
+import com.project.VO.article.ArticleCommentVO;
+import com.project.VO.article.ArticleLikeVO;
+import com.project.VO.user.UserInfoVO;
+import com.project.VO.user.UserVO;
+import com.project.VO.article.ArticleUserVO;
+import com.project.VO.article.ArticleVO;
 import com.project.api.CommentFeignClient;
 import com.project.api.FriendFeignClient;
+import com.project.api.LikeFeignClient;
+import com.project.api.UserFeignClient;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
 import com.project.domain.Article;
 import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.ArticleMapper;
 import com.project.service.ArticleService;
-import com.project.util.UserContext;
+import com.project.util.RedisUtil;
 import com.project.util.ValidateUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,220 +41,216 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
     @Resource
     private ArticleMapper articleMapper;
     @Resource
-    private RedisTemplate<String, String> redisTemplate;
+    private UserFeignClient userFeignClient; // cm-user 模块
     @Resource
-    private FriendFeignClient friendFeignClient;
+    private LikeFeignClient likeFeignClient; // cm-like 模块
     @Resource
-    private CommentFeignClient commentFeignClient;
+    private CommentFeignClient commentFeignClient; // cm-comment 模块
+    @Resource
+    private FriendFeignClient friendFeignClient; // cm-friend 模块
+    @Resource
+    private RedisUtil redisUtil;
     private final Gson gson = new Gson();
 
     /**
-     * 根据用户id查询动态
-     *
-     * @param id
-     * @return
+     * 查询用户所有动态信息
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - list 集合
      */
     @Override
     public List<ArticleVO> queryArticleByUserId(Long id) {
         // 验证
-        Long userId = getUserId(id);
-        if (userId <= 0) {
-            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
-        }
+        Long userId = ValidateUtil.validateUserId(id);
+        ValidateUtil.validateSingleLongTypeParam(userId);
 
-        // 查询redis
-        String listStr = redisTemplate.opsForValue().get(RedisKeyConstants.getArticleUserKey(userId));
-        List<ArticleVO> list = gson.fromJson(listStr, new TypeToken<List<ArticleVO>>() {
+        // 查询 Redis
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, userId);
+        String redisData = redisUtil.getRedisData(redisKey);
+        List<ArticleVO> articleVOList = gson.fromJson(redisData, new TypeToken<List<ArticleVO>>() {
         }.getType());
 
-        if (list == null || list.isEmpty()) {
-            // redis为空，查询数据库
-            List<Article> articles = articleMapper.selectList(new QueryWrapper<Article>()
-                    .select("article_id", "article_content", "article_photos", "create_time")
-                    .eq("user_id", userId));
-            if (articles == null || articles.isEmpty()) {
-                return null;
-            }
-            List<ArticleVO> collect = articles.stream().map(article -> {
-                ArticleVO articleVO = new ArticleVO();
-                BeanUtils.copyProperties(article, articleVO);
-                return articleVO;
-            }).collect(Collectors.toList());
-            // 存入redis
-            redisTemplate.opsForValue().set(RedisKeyConstants.getArticleUserKey(userId), gson.toJson(collect));
-            return collect;
-        }
-
-        return list;
-    }
-
-    /**
-     * 查询校园动态（不包括关注的用户的动态）
-     *
-     * @return
-     */
-    @Override
-    public List<ArticleVO> queryArticle(Long userId) {
-        if (userId <= 0) {
-            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
-        }
-
-        // 查询redis
-        String listStr = redisTemplate.opsForValue().get(RedisKeyConstants.getArticleSchoolKey(userId));
-        List<ArticleVO> articleVOList = gson.fromJson(listStr, new TypeToken<List<ArticleVO>>() {
-        }.getType());
-
+        // Redis 为空，查询数据库
         if (articleVOList == null || articleVOList.isEmpty()) {
-            // 查询数据库
-            // 调用 cm-friend 模块，获取到关注的用户id
-            List<FriendVO> list = null;
+            // 调用 cm-user 模块，获取动态发布用户相关信息
+            UserInfoVO userInfoVO;
             try {
-                list = friendFeignClient.attentionApi(userId);
+                userInfoVO = userFeignClient.getUserInfo(userId);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            List<Long> collect = list.stream().map(FriendVO::getUserId).collect(Collectors.toList());
-            collect.add(userId);
+            ArticleUserVO publishUser = new ArticleUserVO();
+            BeanUtils.copyProperties(userInfoVO, publishUser);
 
-            // 查询动态，把关注的用户和本身的动态排除在外
+            // 获取动态id、动态内容、动态图片、动态发布时间
             List<Article> articles = articleMapper.selectList(new QueryWrapper<Article>()
                     .select("article_id", "article_content", "article_photos", "create_time")
-                    .notIn("user_id", collect));
-            if (articles == null || articles.isEmpty()) {
-                return null;
+                    .eq("user_id", userId));
+
+            // 动态集合
+            List<ArticleVO> articleList = new ArrayList<>();
+            if (articles != null && !articles.isEmpty()) {
+                // 遍历 articles
+                articles.forEach(article -> {
+                    // 转换动态信息
+                    ArticleVO articleVO = new ArticleVO();
+                    BeanUtils.copyProperties(article, articleVO);
+                    // 根据动态id查询点赞信息
+                    ArticleLikeVO articleLikeVO = likeFeignClient.queryLikeInfo(article.getArticleId());
+                    // 根据动态id查询动态评论用户
+                    ArticleCommentVO articleCommentVO = commentFeignClient.queryCommentInfo(article.getArticleId());
+                    // 封装数据
+                    articleVO.setPublishUser(publishUser);
+                    articleVO.setLike(articleLikeVO);
+                    articleVO.setComment(articleCommentVO);
+                    articleList.add(articleVO);
+                });
             }
-            // 数据脱敏
-            List<ArticleVO> voList = articles.stream().map(article -> {
-                ArticleVO articleVO = new ArticleVO();
-                BeanUtils.copyProperties(article, articleVO);
-                return articleVO;
-            }).collect(Collectors.toList());
-            // 存入redis
-            redisTemplate.opsForValue().set(RedisKeyConstants.getArticleSchoolKey(userId), gson.toJson(voList));
-            return voList;
+            // 缓存数据
+            String articleKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, userId);
+            redisUtil.setRedisData(articleKey, gson.toJson(articleList));
+            return articleList;
         }
 
         return articleVOList;
     }
 
     /**
-     * 查询关注用户的动态
-     *
-     * @return
+     * 查询关注用户所有动态信息
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - list 集合
      */
     @Override
-    public List<ArticleVO> queryArticleByAttention(Long userId) {
-        if (userId <= 0) {
-            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
-        }
-        // 查询redis
-        String listStr = redisTemplate.opsForValue().get(RedisKeyConstants.getArticleAttentionKey(userId));
-        List<ArticleVO> list = gson.fromJson(listStr, new TypeToken<List<ArticleVO>>() {
-        }.getType());
-
-        if (list == null || list.isEmpty()) {
-            // redis为空，查询数据库
-            // 调用 cm-friend 模块，获取关注用户id
-            List<FriendVO> friendVOList = friendFeignClient.attentionApi(userId);
-            List<Long> ids = friendVOList.stream().map(FriendVO::getUserId).collect(Collectors.toList());
-            // 根据id批量查询动态
-            List<Article> articles = articleMapper.selectList(new QueryWrapper<Article>()
-                    .select("article_id", "article_content", "article_photos", "create_time")
-                    .in("user_id", ids));
-
-            if (articles == null || articles.isEmpty()) {
-                // 数据库为空
-                return null;
-            }
-
-            // 数据脱敏
-            List<ArticleVO> collect = articles.stream().map(article -> {
-                ArticleVO articleVO = new ArticleVO();
-                BeanUtils.copyProperties(article, articleVO);
-                return articleVO;
-            }).collect(Collectors.toList());
-            // 存入redis
-            redisTemplate.opsForValue().set(RedisKeyConstants.getArticleAttentionKey(userId), gson.toJson(collect));
-            return collect;
-        }
-
-        return list;
-    }
-
-    /**
-     * 根据动态id删除动态
-     *
-     * @param articleId
-     * @return
-     */
-    @Transactional(rollbackFor = Exception.class) // 确保所有异常都会触发回滚
-    @Override
-    public boolean deleteByArticleId(Long articleId) {
-        // 验证参数
-        ValidateUtil.validateSingleLongTypeParam(articleId);
-
-        // 删除数据库记录
-        // 删除数据库动态
-        int deletedRows = articleMapper.deleteById(articleId);
-        if (deletedRows == 0) {
-            log.warn("id为{}的动态不存在", articleId);
-            return false;
-        }
-        // 删除动态相关联的评论
-        boolean result = commentFeignClient.deleteByArticleId(articleId);
-        if (!result) {
-            log.warn("id为{}的动态没有评论", articleId);
-        }
-
-        // 删除 Redis 记录
-        // 删除当前用户的缓存动态
-        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, UserContext.getUserId());
-        try {
-            // 开启 Redis 事务
-            redisTemplate.setEnableTransactionSupport(true); // 启用事务支持
-            redisTemplate.multi(); // 开始事务
-            redisTemplate.delete(redisKey); // 删除操作
-            redisTemplate.exec(); // 提交事务
-        } catch (Exception e) {
-            // Redis 操作失败，回滚 Redis 事务
-            redisTemplate.discard(); // 丢弃事务
-            log.error("Redis 发生异常，操作失败");
-            throw new RuntimeException(e);
-        }
-
-        return true;
-    }
-
-    /**
-     * 查询动态数量
-     *
-     * @param userId
-     * @return
-     */
-    @Override
-    public Integer articleCount(Long userId) {
-        // 验证参数
+    public List<ArticleVO> queryArticleOfAttention(Long userId) {
+        // 验证
         ValidateUtil.validateSingleLongTypeParam(userId);
 
-        // 查询 Redis 记录
-        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_COUNT, userId);
-        String str = redisTemplate.opsForValue().get(redisKey);
-        Integer count = gson.fromJson(str, Integer.class);
+        // 查询 Redis
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_ATTENTION, userId);
+        String redisData = redisUtil.getRedisData(redisKey);
+        List<ArticleVO> articleVOList = gson.fromJson(redisData, new TypeToken<List<ArticleVO>>() {
+        }.getType());
 
-        if (count == null) {
-            // Redis 为空，查询数据库
-            Integer articleCount = articleMapper.selectCount(new QueryWrapper<Article>().eq("user_id", userId));
-            // 存入 Redis
-            redisTemplate.opsForValue().set(redisKey, gson.toJson(articleCount), 24, TimeUnit.HOURS);
-            return articleCount;
+        // Redis 为空，查询数据库
+        if (articleVOList == null || articleVOList.isEmpty()) {
+            // 调用 cm-friend 模块，查询出我的关注用户
+            List<FriendVO> attention = null;
+            try {
+                attention = friendFeignClient.attention(userId);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            // 动态集合
+            List<ArticleVO> articleList = new ArrayList<>();
+            if (attention != null && !attention.isEmpty()) {
+                // 根据每一位用户的id查询出动态
+                attention.forEach(friendVO -> {
+                    // 动态发表者相关信息
+                    ArticleUserVO publishUser = new ArticleUserVO();
+                    BeanUtils.copyProperties(friendVO, publishUser);
+
+                    // 获取动态id、动态内容、动态图片、动态发布时间
+                    List<Article> articles = articleMapper.selectList(new QueryWrapper<Article>()
+                            .select("article_id", "article_content", "article_photos", "create_time")
+                            .eq("user_id", friendVO.getUserId()));
+
+                    if (articles != null && !articles.isEmpty()) {
+                        // 遍历 articles
+                        articles.forEach(article -> {
+                            // 转换动态信息
+                            ArticleVO articleVO = new ArticleVO();
+                            BeanUtils.copyProperties(article, articleVO);
+                            // 根据动态id查询点赞信息
+                            ArticleLikeVO articleLikeVO = likeFeignClient.queryLikeInfo(article.getArticleId());
+                            // 根据动态id查询动态评论用户
+                            ArticleCommentVO articleCommentVO = commentFeignClient.queryCommentInfo(article.getArticleId());
+                            // 封装数据
+                            articleVO.setPublishUser(publishUser);
+                            articleVO.setLike(articleLikeVO);
+                            articleVO.setComment(articleCommentVO);
+                            articleList.add(articleVO);
+                        });
+                    }
+                });
+            }
+            // 缓存数据
+            redisUtil.setRedisData(redisKey, gson.toJson(articleList));
+            return articleList;
         }
-
-        return count;
+        return articleVOList;
     }
 
-    private Long getUserId(Long id) {
-        // id存在，查询别人的信息
-        // id不存在，查询自己的信息
-        return id == null ? UserContext.getUserId() : id;
+    /**
+     * 查询校园所有动态信息
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - list 集合
+     */
+    @Override
+    public List<ArticleVO> queryArticleOfSchool(Long userId) {
+        // 验证
+        ValidateUtil.validateSingleLongTypeParam(userId);
+
+        // 查询 Redis
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_SCHOOL, userId);
+        String redisData = redisUtil.getRedisData(redisKey);
+        List<ArticleVO> articleVOList = gson.fromJson(redisData, new TypeToken<List<ArticleVO>>() {
+        }.getType());
+
+        // Redis 为空，查询数据库
+        if (articleVOList == null || articleVOList.isEmpty()) {
+            // 查询我的关注用户动态信息
+            List<ArticleVO> articleVOList1 = queryArticleOfAttention(userId);
+            // 获取我的关注用户发布的动态的id
+            List<Long> articleIdList = articleVOList1.stream().map(ArticleVO::getArticleId).collect(Collectors.toList());
+            // 查询我自己发布的动态
+            List<ArticleVO> articleVOList2 = queryArticleByUserId(userId);
+            // 获取我自己的动态id
+            List<Long> collect = articleVOList2.stream().map(ArticleVO::getArticleId).collect(Collectors.toList());
+            // 加上自己的动态id集合
+            articleIdList.addAll(collect);
+            List<Article> articles;
+            // 查询校园动态
+            if (!articleIdList.isEmpty()) {
+                articles = articleMapper.selectList(new QueryWrapper<Article>()
+                        .select("article_id", "article_content", "article_photos", "create_time", "user_id")
+                        .notIn("article_id", articleIdList));
+            } else {
+                articles = articleMapper.selectList(new QueryWrapper<Article>()
+                        .select("article_id", "article_content", "article_photos", "create_time", "user_id"));
+            }
+            // 动态集合
+            List<ArticleVO> articleList = new ArrayList<>();
+            if (articles != null && !articles.isEmpty()) {
+                // 遍历动态
+                articles.forEach(article -> {
+                    // 查询动态发布用户信息
+                    UserInfoVO userInfoVO = userFeignClient.getUserInfo(article.getUserId());
+                    // 动态发表者相关信息
+                    ArticleUserVO publishUser = new ArticleUserVO();
+                    BeanUtils.copyProperties(userInfoVO, publishUser);
+                    // 转换动态信息
+                    ArticleVO articleVO = new ArticleVO();
+                    BeanUtils.copyProperties(article, articleVO);
+                    // 根据动态id查询点赞信息
+                    ArticleLikeVO articleLikeVO = likeFeignClient.queryLikeInfo(article.getArticleId());
+                    // 根据动态id查询动态评论用户
+                    ArticleCommentVO articleCommentVO = commentFeignClient.queryCommentInfo(article.getArticleId());
+                    // 封装数据
+                    articleVO.setPublishUser(publishUser);
+                    articleVO.setLike(articleLikeVO);
+                    articleVO.setComment(articleCommentVO);
+                    articleList.add(articleVO);
+                });
+            }
+            // 缓存数据
+            redisUtil.setRedisData(redisKey, gson.toJson(articleList));
+            return articleList;
+        }
+        return articleVOList;
     }
 }

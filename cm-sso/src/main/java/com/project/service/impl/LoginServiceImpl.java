@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.google.gson.Gson;
 import com.project.DTO.PhoneDTO;
-import com.project.VO.UserVO;
+import com.project.VO.user.UserVO;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
 import com.project.domain.User;
@@ -14,34 +14,33 @@ import com.project.mapper.LoginMapper;
 import com.project.service.LoginService;
 import com.project.util.LoginUtil;
 import com.project.util.MD5Util;
+import com.project.util.RedisUtil;
 import com.project.util.TokenUtil;
 import org.springframework.beans.BeanUtils;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
         implements LoginService {
     @Resource
     private LoginMapper loginMapper;
-
     @Resource
-    private RedisTemplate<String, String> redisTemplate;
-
+    private RedisUtil redisUtil;
     private final Gson gson = new Gson();
 
     /**
      * 手机登录
-     *
-     * @param phoneLoginDTO 登录信息
-     * @return
+     * 请求数据:
+     * - phone 手机号
+     * - password 密码
+     * 响应数据:
+     * - token 身份标识
+     * - user 用户完整信息
      */
     @Override
     public Map<String, Object> phoneLogin(PhoneDTO phoneLoginDTO) {
@@ -65,15 +64,20 @@ public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
         // 验证密码是否正确
         LoginUtil.isPasswordValid(password, user.getUserPassword());
 
-        // 生成token
+        // 生成 token
         String token = TokenUtil.createToken(user.getUserId(), user.getUserPhone());
 
-        // token存入redis
-        redisTemplate.opsForValue().set(RedisKeyConstants.getUserTokenKey(user.getUserId()), token);
-        // 用户信息存入redis
-        redisTemplate.opsForValue().set(RedisKeyConstants.getUserInfoKey(user.getUserId()), gson.toJson(user), 24, TimeUnit.HOURS);
+        // token 存入 Redis
+        String tokenKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_TOKEN, user.getUserId());
+        redisUtil.setRedisData(tokenKey, token);
+
+        // 用户信息存入 Redis
         UserVO userVO = new UserVO();
         BeanUtils.copyProperties(user, userVO);
+        String infoKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_INFO, user.getUserId());
+        redisUtil.setRedisData(infoKey, gson.toJson(userVO));
+
+        // 响应给前端
         Map<String, Object> map = new HashMap<>();
         map.put("token", token);
         map.put("user", userVO);
@@ -82,9 +86,10 @@ public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
 
     /**
      * 手机注册
-     *
-     * @param phoneRegisterDTO 手机号码、密码、二次密码
-     * @return string
+     * 请求数据:
+     * - phone 手机号
+     * - password 密码
+     * - checkPassword 校验密码
      */
     @Override
     public boolean phoneRegister(PhoneDTO phoneRegisterDTO) {
