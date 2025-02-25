@@ -16,6 +16,6 @@ public interface UserFeignClient {
      * 响应数据:
      * - List<ArticleUserVO> 用户信息集合
      */
-    @PostMapping("/api/user/getUserInfoBatch")
+    @PostMapping("/api/userInfo/getUserInfoBatch")
     List<ArticleUserVO> getUserInfoBatch(@RequestBody List<Long> userIds);
 }

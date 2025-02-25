@@ -14,6 +14,14 @@ public interface LikeFeignClient {
      * - count 点赞数
      * - List<ArticleUserVO> 点赞用户集合
      */
-    @GetMapping("/api/likes/queryLikeUser")
+    @GetMapping("/api/likes/queryLikeInfo")
     ArticleLikeVO queryLikeInfo(@RequestParam("articleId") Long articleId);
+
+    /**
+     * 根据动态id删除点赞信息
+     * 请求数据:
+     * - articleId 动态id
+     */
+    @GetMapping("/api/likes/deleteLikeInfo")
+    int deleteLikeInfo(@RequestParam("articleId") Long articleId);
 }

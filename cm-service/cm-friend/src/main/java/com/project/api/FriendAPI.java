@@ -31,16 +31,4 @@ public class FriendAPI {
     public List<FriendVO> attention(@RequestParam(value = "userId", required = false) Long userId) {
         return friendsService.attention(userId);
     }
-
-    /**
-     * 查询校园用户
-     * 请求数据:
-     * - userId 用户id
-     * 响应数据
-     * - List<FriendVO> 用户列表
-     */
-    @GetMapping("/school")
-    public List<FriendVO> school(@RequestParam(value = "userId", required = false) Long userId) {
-        return friendsService.school(userId);
-    }
 }

@@ -118,6 +118,8 @@ public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
         User one = new User();
         one.setUserPhone(phone);
         one.setUserPassword(MD5Util.calculateMD5(password));
+        one.setUserAvatar("/static/my/默认头像.jpg"); // 默认头像
+        one.setUserName("默认用户名");
         return loginMapper.insert(one) > 0;
     }
 }

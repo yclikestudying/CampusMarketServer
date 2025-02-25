@@ -1,5 +1,6 @@
 package com.project.controller;
 
+import com.project.VO.FriendVO;
 import com.project.VO.user.UserVO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
@@ -14,11 +15,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 @RestController
-@RequestMapping("/user")
+@RequestMapping("/userInfo")
 @Api(tags = "用户模块")
 @Slf4j
 public class UserController {
@@ -75,5 +77,19 @@ public class UserController {
     public void logout() {
         String tokenKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_TOKEN, UserContext.getUserId());
         redisTemplate.delete(tokenKey);
+    }
+
+    /**
+     * 模糊搜索用户
+     * 请求数据
+     * - keyword 用户名
+     * 响应数据
+     * - List<FriendVO> 用户集合
+     */
+    @GetMapping("/queryLikeUser")
+    @ApiOperation(value = "模糊搜索用户")
+    public Result<List<FriendVO>> queryLikeUser(@RequestParam(value = "keyword", required = false) String keyword) {
+        List<FriendVO> list = userService.queryLikeUser(keyword);
+        return Result.success(ResultCodeEnum.SUCCESS, list);
     }
 }

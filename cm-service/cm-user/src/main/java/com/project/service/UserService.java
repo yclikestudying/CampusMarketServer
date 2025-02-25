@@ -65,4 +65,13 @@ public interface UserService extends IService<User> {
      * - List<FriendVO> 用户信息集合
      */
     List<FriendVO> getUserBatch(List<Long> userIds);
+
+    /**
+     * 模糊搜索用户
+     * 请求数据
+     * - keyword 用户名
+     * 响应数据
+     * - List<FriendVO> 用户集合
+     */
+    List<FriendVO> queryLikeUser(String keyword);
 }

@@ -30,4 +30,16 @@ public class CommentAPI {
     public ArticleCommentVO queryCommentInfo(@RequestParam("articleId") Long articleId) {
         return commentService.queryLikeInfo(articleId);
     }
+
+    /**
+     * 根据动态id删除评论信息
+     * 请求数据:
+     * - articleId 动态id
+     * 响应数据:
+     * - int 删除的行数
+     */
+    @GetMapping("/deleteCommentInfo")
+    public int deleteCommentInfo(@RequestParam("articleId") Long articleId) {
+        return commentService.deleteCommentInfo(articleId);
+    }
 }

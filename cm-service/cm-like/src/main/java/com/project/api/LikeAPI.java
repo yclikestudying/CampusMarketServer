@@ -24,8 +24,20 @@ public class LikeAPI {
      * - count 点赞数
      * - List<ArticleUserVO> 点赞用户集合
      */
-    @GetMapping("/queryLikeUser")
+    @GetMapping("/queryLikeInfo")
     public ArticleLikeVO queryLikeInfo(@RequestParam("articleId") Long articleId) {
         return likesService.queryLikeInfo(articleId);
+    }
+
+    /**
+     * 根据动态id删除点赞信息
+     * 请求数据:
+     * - articleId 动态id
+     * 响应数据
+     * - int 删除的行数
+     */
+    @GetMapping("/deleteLikeInfo")
+    public int deleteLikeInfo(@RequestParam("articleId") Long articleId) {
+        return likesService.deleteLikeInfo(articleId);
     }
 }

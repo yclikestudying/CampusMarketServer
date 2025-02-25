@@ -22,6 +22,6 @@ public interface UserFeignClient {
      * - userName 用户名称
      * - userAvatar 用户头像
      */
-    @GetMapping("/api/user/getUserInfo")
+    @GetMapping("/api/userInfo/getUserInfo")
     UserInfoVO getUserInfo(@RequestParam("userId") Long userId);
 }

@@ -1,5 +1,6 @@
 package com.project.controller;
 
+import com.project.DTO.CommentDTO;
 import com.project.VO.CommentVO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
@@ -21,4 +22,30 @@ public class CommentController {
     @Resource
     private CommentService commentService;
 
+    /**
+     * 发表评论
+     * 请求数据
+     * - articleId 动态id
+     * - comment 评论内容
+     */
+    @PostMapping("/publish")
+    @ApiOperation(value = "发表评论")
+    public Result<String> publish(@RequestBody CommentDTO commentDTO) {
+        System.out.println(commentDTO);
+        boolean result = commentService.publish(commentDTO);
+        return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
+    }
+
+    /**
+     * 删除评论
+     * 请求数据
+     * - articleId 动态id
+     * - commentId 评论id
+     */
+    @DeleteMapping("/delete")
+    @ApiOperation(value = "删除评论")
+    public Result<String> delete(@RequestParam("articleId") Long articleId, @RequestParam("commentId") Long commentId) {
+        boolean result = commentService.delete(articleId, commentId);
+        return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
+    }
 }

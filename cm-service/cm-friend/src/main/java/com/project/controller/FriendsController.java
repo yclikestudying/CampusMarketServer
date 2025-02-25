@@ -8,10 +8,8 @@ import com.project.util.UserContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import javax.annotation.Resource;
 import java.util.List;
 
@@ -39,6 +37,10 @@ public class FriendsController {
 
     /**
      * 查询我的粉丝
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据
+     * - List<FriendVO> 用户列表
      */
     @GetMapping("/fans")
     @ApiOperation(value = "查询我的粉丝")
@@ -50,6 +52,10 @@ public class FriendsController {
 
     /**
      * 查询互关用户
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据
+     * - List<FriendVO> 用户列表
      */
     @GetMapping("/attentionAndFans")
     @ApiOperation(value = "查询互关用户")
@@ -59,38 +65,74 @@ public class FriendsController {
         return Result.success(ResultCodeEnum.SUCCESS, list);
     }
 
+//    /**
+//     * 查询我的关注数量
+//     * 请求数据:
+//     * - userId 用户id
+//     * 响应数据
+//     * - count 关注数量
+//     */
+//    @GetMapping("/attentionCount")
+//    @ApiOperation(value = "查询我的关注数量")
+//    public Result<Integer> attentionCount(@RequestParam(value = "userId", required = false) Long userId) {
+//        log.info("查询我的关注数量");
+//        Integer count = friendsService.attentionCount(userId);
+//        return Result.success(ResultCodeEnum.SUCCESS, count);
+//    }
+//
+//    /**
+//     * 查询我的粉丝数量
+//     * 请求数据:
+//     * - userId 用户id
+//     * 响应数据
+//     * - count 粉丝数量
+//     */
+//    @GetMapping("/fansCount")
+//    @ApiOperation(value = "查询我的粉丝数量")
+//    public Result<Integer> fansCount(@RequestParam(value = "userId", required = false) Long userId) {
+//        log.info("查询我的粉丝数量");
+//        Integer count = friendsService.fansCount(userId);
+//        return Result.success(ResultCodeEnum.SUCCESS, count);
+//    }
+//
+//    /**
+//     * 查询互关用户数量
+//     * 请求数据:
+//     * - userId 用户id
+//     * 响应数据
+//     * - count 互关用户数量
+//     */
+//    @GetMapping("/attentionAndFansCount")
+//    @ApiOperation(value = "查询互关用户数量")
+//    public Result<Integer> attentionAndFansCount() {
+//        log.info("查询互关用户数量");
+//        Integer count = friendsService.attentionAndFansCount(UserContext.getUserId());
+//        return Result.success(ResultCodeEnum.SUCCESS, count);
+//    }
+
     /**
-     * 查询我的关注数量
-     *
-     * @return
+     * 关注用户
+     * 请求数据
+     * - userId 我的id
+     * - otherId 关注用户的id
      */
-    @GetMapping("/attentionCount")
-    @ApiOperation(value = "查询我的关注数量")
-    public Result<Integer> attentionCount(@RequestParam(value = "userId", required = false) Long userId) {
-        log.info("查询我的关注数量");
-        Integer count = friendsService.attentionCount(userId);
-        return Result.success(ResultCodeEnum.SUCCESS, count);
+    @PutMapping("/attentionUser")
+    @ApiOperation(value = "关注用户")
+    public Result<String> attentionUser(@RequestParam("userId") Long userId, @RequestParam("otherId") Long otherId) {
+        boolean result = friendsService.attentionUser(userId, otherId);
+        return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
     }
 
     /**
-     * 查询我的粉丝数量
+     * 取消关注用户
+     * 请求数据
+     * - userId 我的id
+     * - otherId 关注用户的id
      */
-    @GetMapping("/fansCount")
-    @ApiOperation(value = "查询我的粉丝数量")
-    public Result<Integer> fansCount(@RequestParam(value = "userId", required = false) Long userId) {
-        log.info("查询我的粉丝数量");
-        Integer count = friendsService.fansCount(userId);
-        return Result.success(ResultCodeEnum.SUCCESS, count);
-    }
-
-    /**
-     * 查询互关用户数量
-     */
-    @GetMapping("/attentionAndFansCount")
-    @ApiOperation(value = "查询互关用户数量")
-    public Result<Integer> attentionAndFansCount() {
-        log.info("查询互关用户数量");
-        Integer count = friendsService.attentionAndFansCount(UserContext.getUserId());
-        return Result.success(ResultCodeEnum.SUCCESS, count);
+    @PutMapping("/unAttentionUser")
+    @ApiOperation(value = "关注用户")
+    public Result<String> unAttentionUser(@RequestParam("userId") Long userId, @RequestParam("otherId") Long otherId) {
+        boolean result = friendsService.unAttentionUser(userId, otherId);
+        return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
     }
 }

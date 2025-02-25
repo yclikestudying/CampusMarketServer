@@ -33,7 +33,7 @@ public class RedisUtil {
                     return operations.exec(); // 提交事务
                 } catch (Exception e) {
                     operations.discard(); // 取消事务
-                    log.error("Redis 发生异常，操作失败", e);
+                    log.error("Redis 发生异常，删除缓存失败", e);
                     throw new RuntimeException(e);
                 }
             }

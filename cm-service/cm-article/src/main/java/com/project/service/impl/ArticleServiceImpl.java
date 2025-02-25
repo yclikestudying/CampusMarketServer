@@ -22,13 +22,18 @@ import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.ArticleMapper;
 import com.project.service.ArticleService;
 import com.project.util.RedisUtil;
+import com.project.util.UploadAvatar;
+import com.project.util.UserContext;
 import com.project.util.ValidateUtil;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -86,7 +91,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
             // 获取动态id、动态内容、动态图片、动态发布时间
             List<Article> articles = articleMapper.selectList(new QueryWrapper<Article>()
                     .select("article_id", "article_content", "article_photos", "create_time")
-                    .eq("user_id", userId));
+                    .eq("user_id", userId)
+                    .orderByDesc("create_time"));
 
             // 动态集合
             List<ArticleVO> articleList = new ArrayList<>();
@@ -252,5 +258,112 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
             return articleList;
         }
         return articleVOList;
+    }
+
+    /**
+     * 查询用户动态数量
+     * 请求数据:
+     * - userId 用户id
+     * 响应数据:
+     * - count 动态数量
+     */
+    @Override
+    public Integer queryArticleCount(Long userId) {
+        // 验证
+        ValidateUtil.validateUserId(userId);
+
+        // 查询数据库记录
+        return articleMapper.selectCount(new QueryWrapper<Article>().eq("user_id", userId));
+    }
+
+    /**
+     * 根据动态id删除动态以及相关信息
+     * 请求数据:
+     * - articleId 动态id
+     */
+    @Override
+    public boolean deleteArticleByArticleId(Long articleId) {
+        // 验证参数
+        ValidateUtil.validateSingleLongTypeParam(articleId);
+
+        // 删除数据库动态
+        int delete = articleMapper.deleteById(articleId);
+        if (delete == 0) {
+            log.warn("动态不存在，articleId: {}", articleId);
+            return false;
+        }
+
+        // 删除相关点赞
+        try {
+            int likeResult = likeFeignClient.deleteLikeInfo(articleId);
+            if (likeResult == 0) {
+                log.warn("该动态没有点赞信息，articleId: {}", articleId);
+            }
+        } catch (Exception e) {
+            log.error("删除点赞信息失败，articleId: {}", articleId, e);
+        }
+
+        // 删除相关评论
+        try {
+            int commentResult = commentFeignClient.deleteCommentInfo(articleId);
+            if (commentResult == 0) {
+                log.warn("该动态没有评论信息，articleId: {}", articleId);
+            }
+        } catch (Exception e) {
+            log.error("删除评论信息失败，articleId: {}", articleId, e);
+        }
+
+        // 删除 Redis 缓存
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, UserContext.getUserId());
+        redisUtil.redisTransaction(redisKey);
+        return true;
+    }
+
+    /**
+     * 上传校园动态
+     * 请求数据:
+     * - file 图片二进制数据
+     * - text 文本内容
+     * - count 图片数量
+     */
+    @Override
+    public boolean uploadArticle(List<MultipartFile> files, String text) {
+        // 验证参数
+        if (files.isEmpty() && StringUtils.isBlank(text)) {
+            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+        }
+
+        Article article = new Article();
+        article.setUserId(UserContext.getUserId());
+        List<String> link = new ArrayList<>();
+        // 上传文件到oss
+        if (!files.isEmpty()) {
+            for (MultipartFile file : files) {
+                try {
+                    String articleLink = UploadAvatar.uploadAvatar(file, "article");
+                    link.add(articleLink);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            String linkStr = gson.toJson(link);
+            article.setArticlePhotos(linkStr);
+        }
+
+        if (!StringUtils.isBlank(text)) {
+            article.setArticleContent(text);
+        }
+
+        // 存储数据库
+        int insert = articleMapper.insert(article);
+        if (insert == 0) {
+            log.warn("保存数据库失败");
+            return false;
+        }
+
+        // 删除 Redis 记录
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, UserContext.getUserId());
+        redisUtil.redisTransaction(redisKey);
+        return true;
     }
 }

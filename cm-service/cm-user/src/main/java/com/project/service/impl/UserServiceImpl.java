@@ -180,6 +180,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public boolean updateAvatar(Long userId, MultipartFile file) {
         // 验证参数
+        ValidateUtil.validateSingleLongTypeParam(userId);
         if (file == null || file.isEmpty()) {
             throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
         }
@@ -244,15 +245,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public List<ArticleUserVO> getUserInfoBatch(List<Long> userIds) {
         List<ArticleUserVO> articleUserVOList = new ArrayList<>();
         if (userIds != null && !userIds.isEmpty()) {
-            List<User> users = userMapper.selectBatchIds(userIds);
-            if (users != null && !users.isEmpty()) {
-                users.forEach(user -> {
-                    ArticleUserVO articleUserVO = new ArticleUserVO();
-                    BeanUtils.copyProperties(user, articleUserVO);
-                    articleUserVOList.add(articleUserVO);
-                });
-                return articleUserVOList;
-            }
+            userIds.forEach(id -> {
+                User user = userMapper.selectOne(new QueryWrapper<User>()
+                        .select("user_id", "user_name", "user_avatar")
+                        .eq("user_id", id));
+                ArticleUserVO articleUserVO = new ArticleUserVO();
+                BeanUtils.copyProperties(user, articleUserVO);
+                articleUserVOList.add(articleUserVO);
+            });
+            return articleUserVOList;
         }
         return null;
     }
@@ -279,5 +280,34 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             friendVOList.add(friendVO);
         });
         return friendVOList;
+    }
+
+    /**
+     * 模糊搜索用户
+     * 请求数据
+     * - keyword 用户名
+     * 响应数据
+     * - List<FriendVO> 用户集合
+     */
+    @Override
+    public List<FriendVO> queryLikeUser(String keyword) {
+        // 查询部分用户
+        List<User> users = userMapper.selectList(new QueryWrapper<User>()
+                .select("user_id", "user_name", "user_avatar", "user_profile")
+                .like("user_name", keyword));
+
+        // 过滤掉自己
+        List<User> userList = users.stream().filter(user -> !Objects.equals(user.getUserId(), UserContext.getUserId())).collect(Collectors.toList());
+
+        List<FriendVO> list = new ArrayList<>();
+        if (!userList.isEmpty()) {
+            users.forEach(user -> {
+                FriendVO friendVO = new FriendVO();
+                BeanUtils.copyProperties(user, friendVO);
+                list.add(friendVO);
+            });
+        }
+
+        return list;
     }
 }

@@ -15,8 +15,31 @@ public interface LikesService extends IService<Likes> {
      * - List<ArticleUserVO> 点赞用户集合
      */
     ArticleLikeVO queryLikeInfo(Long articleId);
-    // 根据动态id进行点赞
-    String like(Long userId, Long articleId);
-    // 根据动态id取消点赞
-    String unlike(Long userId, Long articleId);
+
+    /**
+     * 根据动态id进行点赞
+     * 请求数据
+     * - articleId 动态id
+     * - userId 被点赞用户id
+     * 响应数据
+     * - success 点赞成功
+     */
+    String like(Long articleId, Long userId);
+
+    /**
+     * 根据动态id取消点赞
+     * 请求数据
+     * - articleId 动态id
+     * - userId 用户id
+     * 响应数据
+     * - success 取消点赞成功
+     */
+    String unlike(Long articleId, Long userId);
+
+    /**
+     * 根据动态id删除点赞信息
+     * 请求数据:
+     * - articleId 动态id
+     */
+    int deleteLikeInfo(Long articleId);
 }

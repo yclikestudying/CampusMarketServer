@@ -19,54 +19,34 @@ import java.util.Map;
 public class LikesController {
     @Resource
     private LikesService likesService;
-//
-//    /**
-//     * 获取自己的动态的点赞数
-//     */
-//    @GetMapping("/queryLikesOfUser")
-//    @ApiOperation(value = "获取自己的动态的点赞数")
-//    public Result<Map<Long, Integer>> queryLikesOfUser(@RequestParam(value = "userId", required = false) Long id) {
-//        Map<Long, Integer> map = likesService.queryLikesOfUser(id);
-//        return Result.success(ResultCodeEnum.SUCCESS, map);
-//    }
-//
-//    /**
-//     * 获取校园动态的点赞数
-//     */
-//    @GetMapping("/queryLikesOfCampus")
-//    @ApiOperation(value = "获取校园动态的点赞数")
-//    public Result<Map<Long, Integer>> queryLikesOfCampus() {
-//        Map<Long, Integer> map = likesService.queryLikesOfCampus(UserContext.getUserId());
-//        return Result.success(ResultCodeEnum.SUCCESS, map);
-//    }
-//
-//    /**
-//     * 获取关注用户动态的点赞数
-//     */
-//    @GetMapping("/queryLikesOfAttention")
-//    @ApiOperation(value = "获取关注用户动态的点赞数")
-//    public Result<Map<Long, Integer>> queryLikesOfAttention() {
-//        Map<Long, Integer> map = likesService.queryLikesOfAttention(UserContext.getUserId());
-//        return Result.success(ResultCodeEnum.SUCCESS, map);
-//    }
 
     /**
      * 根据动态id进行点赞
+     * 请求数据
+     * - articleId 动态id
+     * - userId 被点赞用户id
+     * 响应数据
+     * - success 点赞成功
      */
-    @PostMapping("/like/{articleId}")
+    @PutMapping("/like")
     @ApiOperation(value = "根据动态id进行点赞")
-    public Result<String> like(@PathVariable("articleId") Long articleId) {
-        String str = likesService.like(UserContext.getUserId(), articleId);
+    public Result<String> like(@RequestParam("articleId") Long articleId, @RequestParam("userId") Long userId) {
+        String str = likesService.like(articleId, userId);
         return Result.success(ResultCodeEnum.SUCCESS, str);
     }
 
     /**
      * 根据动态id取消点赞
+     * 请求数据
+     * - articleId 动态id
+     * - userId 用户id
+     * 响应数据
+     * - success 取消点赞成功
      */
-    @PostMapping("/unlike/{articleId}")
+    @PutMapping("/unlike")
     @ApiOperation(value = "根据动态id取消点赞")
-    public Result<String> unlike(@PathVariable("articleId") Long articleId) {
-        String str = likesService.unlike(UserContext.getUserId(), articleId);
+    public Result<String> unlike(@RequestParam("articleId") Long articleId, @RequestParam("userId") Long userId) {
+        String str = likesService.unlike(articleId, userId);
         return Result.success(ResultCodeEnum.SUCCESS, str);
     }
 }

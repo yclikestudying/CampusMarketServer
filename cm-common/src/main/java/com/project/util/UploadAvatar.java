@@ -29,7 +29,7 @@ public class UploadAvatar {
         String accessKeyId = "LTAI5tHFTp1DAhhY5XMQb25q";
         String accessKeySecret = "VZyyrusCjJLSTtEswtCaRzClBlXutj";
         // 填写Bucket名称，例如examplebucket。
-        String bucketName = "yc-project";
+        String bucketName = "campusmarket";
         // 获取当前时间的年月日
         Date date = new Date();
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");

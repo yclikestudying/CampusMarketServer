@@ -17,4 +17,14 @@ public interface CommentFeignClient {
      */
     @GetMapping("/api/comment/queryCommentInfo")
     ArticleCommentVO queryCommentInfo(@RequestParam("articleId") Long articleId);
+
+    /**
+     * 根据动态id删除评论信息
+     * 请求数据:
+     * - articleId 动态id
+     * 响应数据:
+     * - int 删除的行数
+     */
+    @GetMapping("/api/comment/deleteCommentInfo")
+    int deleteCommentInfo(@RequestParam("articleId") Long articleId);
 }

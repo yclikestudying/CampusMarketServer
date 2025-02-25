@@ -15,6 +15,7 @@ import com.project.domain.Likes;
 import com.project.exception.BusinessExceptionHandler;
 import com.project.mapper.LikesMapper;
 import com.project.service.LikesService;
+import com.project.util.RedisUtil;
 import com.project.util.UserContext;
 import com.project.util.ValidateUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -35,9 +36,9 @@ public class LikesServiceImpl extends ServiceImpl<LikesMapper, Likes>
     @Resource
     private LikesMapper likesMapper;
     @Resource
-    private RedisTemplate<String, String> redisTemplate;
-    @Resource
     private UserFeignClient userFeignClient; // 调用 cm-user 模块
+    @Resource
+    private RedisUtil redisUtil;
     private final Gson gson = new Gson();
 
     /**
@@ -52,138 +53,110 @@ public class LikesServiceImpl extends ServiceImpl<LikesMapper, Likes>
     public ArticleLikeVO queryLikeInfo(Long articleId) {
         // 验证
         ValidateUtil.validateSingleLongTypeParam(articleId);
-        
+
         // 查询点赞信息
         List<Likes> likeList = likesMapper.selectList(new QueryWrapper<Likes>().eq("article_id", articleId));
         // 获取用户id
-        List<Long> userIdList = null;
+        ArticleLikeVO articleLikeVO = new ArticleLikeVO();
+        List<Long> userIdList;
         if (likeList != null && !likeList.isEmpty()) {
             userIdList = likeList.stream().map(Likes::getUserId).collect(Collectors.toList());
             // 批量查询用户信息
             List<ArticleUserVO> articleUserVOList = userFeignClient.getUserInfoBatch(userIdList);
-
-            ArticleLikeVO articleLikeVO = new ArticleLikeVO();
             articleLikeVO.setCount(articleUserVOList.size());
             articleLikeVO.setArticleUserVOList(articleUserVOList);
-            return articleLikeVO;
         }
-        return null;
+        return articleLikeVO;
     }
 
     /**
      * 根据动态id进行点赞
-     *
-     * @param userId
-     * @param articleId
+     * 请求数据
+     * - articleId 动态id
+     * - userId 被点赞用户id
+     * 响应数据
+     * - success 点赞成功
+     * 说明
+     * - UserContext.getUserId() 我自己
+     * - userId 被点赞用户
      */
     @Override
-    public String like(Long userId, Long articleId) {
-        validateUserId(userId);
-        if (articleId <= 0) {
-            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
-        }
+    public String like(Long articleId, Long userId) {
+        // 验证参数
+        ValidateUtil.validateTwoLongTypeParam(userId, articleId);
 
         // 查询点赞记录
         Likes likes = likesMapper.selectOne(new QueryWrapper<Likes>()
                 .eq("article_id", articleId)
-                .eq("user_id", userId));
+                .eq("user_id", UserContext.getUserId()));
         if (likes != null) {
+            log.warn("已经点赞，点赞失败");
             return "不能重复点赞";
         }
 
         // 保存点赞信息
         Likes one = new Likes();
         one.setArticleId(articleId);
-        one.setUserId(userId);
-
-        return likesMapper.insert(one) > 0 ? "点赞成功" : "点赞失败";
+        one.setUserId(UserContext.getUserId());
+        int insert = likesMapper.insert(one);
+        if (insert > 0) {
+            // 更新被点赞人的动态缓存
+            String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, userId);
+            redisUtil.redisTransaction(redisKey);
+            return "点赞成功";
+        }
+        return "点赞失败";
     }
 
+    /**
+     * 根据动态id取消点赞
+     * 请求数据
+     * - articleId 动态id
+     * - userId 用户id
+     * 响应数据
+     * - success 取消点赞成功
+     * 说明
+     * - UserContext.getUserId() 我自己
+     * - userId 被点赞用户
+     */
     @Override
-    public String unlike(Long userId, Long articleId) {
-        validateUserId(userId);
-        if (articleId <= 0) {
-            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
-        }
+    public String unlike(Long articleId, Long userId) {
+        // 验证参数
+        ValidateUtil.validateTwoLongTypeParam(userId, articleId);
 
         // 查询点赞记录
         Likes likes = likesMapper.selectOne(new QueryWrapper<Likes>()
                 .eq("article_id", articleId)
-                .eq("user_id", userId));
+                .eq("user_id", UserContext.getUserId()));
         if (likes == null) {
-            return "不能取消点赞";
+            log.warn("还未点赞，取消失败");
+            return "取消失败";
         }
 
-        // 删除点赞信息
+        // 取消点赞信息
         int delete = likesMapper.delete(new QueryWrapper<Likes>()
                 .eq("article_id", articleId)
-                .eq("user_id", userId));
-
-        return delete > 0 ? "取消点赞成功" : "取消点赞失败";
-    }
-
-    /**
-     * 根据远程调用获取的文章查询其点赞
-     *
-     * @param list
-     * @return
-     */
-    private Map<Long, Integer> getLikeMap(List<ArticleVO> list) {
-        // 发布过动态就获取动态id
-        List<Long> collect = list.stream().map(ArticleVO::getArticleId).collect(Collectors.toList());
-        // 根据每一个动态id查询点赞数
-        Map<Long, Integer> map = new HashMap<>();
-        collect.forEach(articleId -> {
-            Integer count = likesMapper.selectCount(new QueryWrapper<Likes>().eq("article_id", articleId));
-            map.put(articleId, count);
-        });
-        return map;
-    }
-
-    /**
-     * 把数据存入 redis 中
-     *
-     * @param str
-     * @param userId
-     * @param likeMap
-     */
-    private void saveRedis(String str, Long userId, Map<Long, Integer> likeMap) {
-        redisTemplate.opsForValue().set(RedisKeyConstants.getRedisKey(str, userId), gson.toJson(likeMap));
-    }
-
-    /**
-     * 获取 redis 中的数据并反序列化
-     *
-     * @param str
-     * @param userId
-     * @return
-     */
-    private Map<Long, Integer> getRedisLikeMap(String str, Long userId) {
-        String likeMapStr = redisTemplate.opsForValue().get(RedisKeyConstants.getRedisKey(str, userId));
-        return gson.fromJson(likeMapStr, new TypeToken<Map<Long, Integer>>() {
-        }.getType());
-    }
-
-    /**
-     * 验证 userId
-     *
-     * @param userId
-     */
-    private void validateUserId(Long userId) {
-        if (userId <= 0) {
-            throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
+                .eq("user_id", UserContext.getUserId()));
+        if (delete > 0) {
+            // 更新被点赞人的动态缓存
+            String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, userId);
+            redisUtil.redisTransaction(redisKey);
+            return "取消点赞成功";
         }
+        return "取消点赞失败";
     }
 
     /**
-     * 判断查询哪一个用户的信息
-     *
-     * @param id
-     * @return
+     * 根据动态id删除点赞信息
+     * 请求数据:
+     * - articleId 动态id
      */
-    private Long getUserId(Long id) {
-        // id存在，说明前端传值，查询别人的信息
-        // id不存在，说明前端未传值，查询自己的信息
-        return id == null ? UserContext.getUserId() : id;
+    @Override
+    public int deleteLikeInfo(Long articleId) {
+        // 验证参数
+        ValidateUtil.validateSingleLongTypeParam(articleId);
+
+        // 删除数据库中动态点赞信息
+        return likesMapper.delete(new QueryWrapper<Likes>().eq("article_id", articleId));
     }
 }
