@@ -43,5 +43,5 @@ public interface CommentService extends IService<Comment> {
      * - articleId 动态id
      * - commentId 评论id
      */
-    boolean delete(Long articleId, Long commentId);
+    boolean delete(Long articleId, Long commentId, Long userId);
 }

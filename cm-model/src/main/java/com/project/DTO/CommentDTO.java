@@ -13,4 +13,9 @@ public class CommentDTO {
      * 评论内容
      */
     private String content;
+
+    /**
+     * 发表用户id
+     */
+    private Long userId;
 }

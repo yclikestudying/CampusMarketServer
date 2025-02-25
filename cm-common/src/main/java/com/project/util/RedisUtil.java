@@ -47,7 +47,7 @@ public class RedisUtil {
      * @param data 具体数据
      */
     public void setRedisData(String key, String data) {
-        redisTemplate.opsForValue().set(key, data, 24, TimeUnit.HOURS);
+        redisTemplate.opsForValue().set(key, data, 5, TimeUnit.MINUTES);
     }
 
     /**

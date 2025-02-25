@@ -31,7 +31,6 @@ public class CommentController {
     @PostMapping("/publish")
     @ApiOperation(value = "发表评论")
     public Result<String> publish(@RequestBody CommentDTO commentDTO) {
-        System.out.println(commentDTO);
         boolean result = commentService.publish(commentDTO);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
     }
@@ -44,8 +43,8 @@ public class CommentController {
      */
     @DeleteMapping("/delete")
     @ApiOperation(value = "删除评论")
-    public Result<String> delete(@RequestParam("articleId") Long articleId, @RequestParam("commentId") Long commentId) {
-        boolean result = commentService.delete(articleId, commentId);
+    public Result<String> delete(@RequestParam("articleId") Long articleId, @RequestParam("commentId") Long commentId, @RequestParam("userId") Long userId) {
+        boolean result = commentService.delete(articleId, commentId, userId);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
     }
 }

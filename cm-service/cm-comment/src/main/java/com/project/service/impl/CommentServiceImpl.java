@@ -103,8 +103,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
     public boolean publish(CommentDTO commentDTO) {
         String content = commentDTO.getContent();
         Long articleId = commentDTO.getArticleId();
+        Long userId = commentDTO.getUserId();
         // 验证
-        ValidateUtil.validateSingleLongTypeParam(articleId);
+        ValidateUtil.validateTwoLongTypeParam(articleId, userId);
         if (StringUtils.isBlank(content)) {
             throw new BusinessExceptionHandler(Objects.requireNonNull(ResultCodeEnum.getByCode(400)));
         }
@@ -121,7 +122,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         }
 
         // 更新缓存
-        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, UserContext.getUserId());
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, userId);
         redisUtil.redisTransaction(redisKey);
         return true;
     }
@@ -133,9 +134,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
      * - commentId 评论id
      */
     @Override
-    public boolean delete(Long articleId, Long commentId) {
+    public boolean delete(Long articleId, Long commentId, Long userId) {
         // 验证
-        ValidateUtil.validateTwoLongTypeParam(articleId, commentId);
+        ValidateUtil.validateThreeLongTypeParam(articleId, commentId, userId);
 
         // 删除数据库记录
         int delete = commentMapper.delete(new QueryWrapper<Comment>()
@@ -147,7 +148,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         }
 
         // 删除 Redis 记录
-        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, UserContext.getUserId());
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, userId);
         redisUtil.redisTransaction(redisKey);
         return true;
     }
