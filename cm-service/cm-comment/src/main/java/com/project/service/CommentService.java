@@ -18,7 +18,7 @@ public interface CommentService extends IService<Comment> {
      * - count 评论数
      * - List<ArticleUserVO> 评论用户
      */
-    ArticleCommentVO queryLikeInfo(Long articleId);
+    ArticleCommentVO queryCommentInfo(Long articleId);
 
     /**
      * 根据动态id删除评论信息

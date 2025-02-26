@@ -69,13 +69,13 @@ public class LoginServiceImpl extends ServiceImpl<LoginMapper, User>
 
         // token 存入 Redis
         String tokenKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_TOKEN, user.getUserId());
-        redisUtil.setRedisData(tokenKey, token);
+        redisUtil.setRedisData(tokenKey, token, 24);
 
         // 用户信息存入 Redis
         UserVO userVO = new UserVO();
         BeanUtils.copyProperties(user, userVO);
         String infoKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_INFO, user.getUserId());
-        redisUtil.setRedisData(infoKey, gson.toJson(userVO));
+        redisUtil.setRedisData(infoKey, gson.toJson(userVO), 24);
 
         // 响应给前端
         Map<String, Object> map = new HashMap<>();

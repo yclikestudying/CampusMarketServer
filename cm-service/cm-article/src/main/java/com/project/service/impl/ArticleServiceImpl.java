@@ -182,6 +182,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleMapper, Article>
                     }
                 });
             }
+            // 按照时间排序
+            articleList.sort((a1, a2) -> a2.getCreateTime().compareTo(a1.getCreateTime()));
             // 缓存数据
             redisUtil.setRedisData(redisKey, gson.toJson(articleList));
             return articleList;

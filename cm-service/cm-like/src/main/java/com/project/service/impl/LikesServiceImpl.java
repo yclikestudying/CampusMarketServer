@@ -8,6 +8,7 @@ import com.project.VO.article.ArticleLikeVO;
 import com.project.VO.article.ArticleUserVO;
 import com.project.VO.article.ArticleVO;
 import com.project.api.ArticleFeignClient;
+import com.project.api.FriendFeignClient;
 import com.project.api.UserFeignClient;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
@@ -37,6 +38,8 @@ public class LikesServiceImpl extends ServiceImpl<LikesMapper, Likes>
     private LikesMapper likesMapper;
     @Resource
     private UserFeignClient userFeignClient; // 调用 cm-user 模块
+    @Resource
+    private FriendFeignClient friendFeignClient;
     @Resource
     private RedisUtil redisUtil;
     private final Gson gson = new Gson();
@@ -103,6 +106,11 @@ public class LikesServiceImpl extends ServiceImpl<LikesMapper, Likes>
             // 更新被点赞人的动态缓存
             String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, userId);
             redisUtil.redisTransaction(redisKey);
+            // 查询被点赞人是否是我的关注
+            boolean result = friendFeignClient.isAttention(UserContext.getUserId(), userId);
+            if (result) {
+                redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_ATTENTION, UserContext.getUserId()));
+            }
             return "点赞成功";
         }
         return "点赞失败";
@@ -141,6 +149,11 @@ public class LikesServiceImpl extends ServiceImpl<LikesMapper, Likes>
             // 更新被点赞人的动态缓存
             String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, userId);
             redisUtil.redisTransaction(redisKey);
+            // 查询被取消点赞用户是否是我的关注
+            boolean result = friendFeignClient.isAttention(UserContext.getUserId(), userId);
+            if (result) {
+                redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_ATTENTION, UserContext.getUserId()));
+            }
             return "取消点赞成功";
         }
         return "取消点赞失败";

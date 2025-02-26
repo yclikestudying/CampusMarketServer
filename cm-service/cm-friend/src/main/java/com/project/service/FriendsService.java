@@ -76,4 +76,14 @@ public interface FriendsService extends IService<Friends> {
      * - otherId 关注用户的id
      */
     boolean unAttentionUser(Long userId, Long otherId);
+
+    /**
+     * 查询某人是否是我的关注
+     * 请求数据:
+     * - userId 用户id
+     * - otherId 被评论者id
+     * 响应数据
+     * - true or false
+     */
+    boolean isAttention(Long userId, Long otherId);
 }

@@ -28,7 +28,7 @@ public class CommentAPI {
      */
     @GetMapping("/queryCommentInfo")
     public ArticleCommentVO queryCommentInfo(@RequestParam("articleId") Long articleId) {
-        return commentService.queryLikeInfo(articleId);
+        return commentService.queryCommentInfo(articleId);
     }
 
     /**

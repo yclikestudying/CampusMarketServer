@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.project.DTO.CommentDTO;
 import com.project.VO.article.ArticleCommentVO;
 import com.project.VO.article.ArticleUserVO;
+import com.project.api.FriendFeignClient;
 import com.project.api.UserFeignClient;
 import com.project.common.ResultCodeEnum;
 import com.project.constants.RedisKeyConstants;
@@ -34,6 +35,8 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
     @Resource
     private UserFeignClient userFeignClient;
     @Resource
+    private FriendFeignClient friendFeignClient;
+    @Resource
     private RedisUtil redisUtil;
 
 
@@ -46,7 +49,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
      * - List<ArticleUserVO> 评论用户
      */
     @Override
-    public ArticleCommentVO queryLikeInfo(Long articleId) {
+    public ArticleCommentVO queryCommentInfo(Long articleId) {
         // 验证
         ValidateUtil.validateSingleLongTypeParam(articleId);
 
@@ -121,6 +124,12 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
             return false;
         }
 
+        // 查询被评论者是否是我的关注
+        boolean result = friendFeignClient.isAttention(UserContext.getUserId(), userId);
+        if (result) {
+            redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_ATTENTION, UserContext.getUserId()));
+        }
+
         // 更新缓存
         String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_USER, userId);
         redisUtil.redisTransaction(redisKey);
@@ -145,6 +154,12 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment>
         if (delete == 0) {
             log.warn("评论不存在");
             return false;
+        }
+
+        // 查询被评论者是否是我的关注
+        boolean result = friendFeignClient.isAttention(UserContext.getUserId(), userId);
+        if (result) {
+            redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_ATTENTION, UserContext.getUserId()));
         }
 
         // 删除 Redis 记录

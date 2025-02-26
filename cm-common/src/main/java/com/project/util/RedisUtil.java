@@ -51,6 +51,16 @@ public class RedisUtil {
     }
 
     /**
+     * Redis 存储数据
+     *
+     * @param key  操作的 Redis 数据前缀
+     * @param data 具体数据
+     */
+    public void setRedisData(String key, String data, Integer time) {
+        redisTemplate.opsForValue().set(key, data, time, TimeUnit.HOURS);
+    }
+
+    /**
      * Redis 获取数据
      *
      * @param key 操作的 Redis 数据前缀

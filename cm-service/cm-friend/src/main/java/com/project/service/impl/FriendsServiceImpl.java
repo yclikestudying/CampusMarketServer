@@ -287,11 +287,38 @@ public class FriendsServiceImpl extends ServiceImpl<FriendsMapper, Friends>
         redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_ATTENTION, userId));
         // 我的互关
         redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_ATTENTIONFANS, userId));
+        // 我的关注用户动态
+        redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_ATTENTION, userId));
         // 他的粉丝
         redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_FANS, otherId));
         // 他的互关
         redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_ATTENTIONFANS, otherId));
         return true;
+    }
+
+    /**
+     * 查询某人是否是我的关注
+     * 请求数据:
+     * - userId 用户id
+     * - otherId 被评论者id
+     * 响应数据
+     * - true or false
+     */
+    @Override
+    public boolean isAttention(Long userId, Long otherId) {
+        // 验证参数
+        ValidateUtil.validateTwoLongTypeParam(userId, otherId);
+
+        // 查询数据库记录
+        Friends friends = friendsMapper.selectOne(new QueryWrapper<Friends>()
+                .eq("follower_id", userId)
+                .eq("followee_id", otherId));
+
+        if (friends != null) {
+            return true;
+        }
+
+        return false;
     }
 
     private Long getUserId(Long id) {
