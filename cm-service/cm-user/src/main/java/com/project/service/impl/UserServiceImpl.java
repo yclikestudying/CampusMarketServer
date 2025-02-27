@@ -247,7 +247,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (userIds != null && !userIds.isEmpty()) {
             userIds.forEach(id -> {
                 User user = userMapper.selectOne(new QueryWrapper<User>()
-                        .select("user_id", "user_name", "user_avatar")
+                        .select("user_id", "user_name", "user_avatar", "user_profile")
                         .eq("user_id", id));
                 ArticleUserVO articleUserVO = new ArticleUserVO();
                 BeanUtils.copyProperties(user, articleUserVO);

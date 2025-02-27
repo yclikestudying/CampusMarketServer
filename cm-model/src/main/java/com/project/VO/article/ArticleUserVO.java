@@ -23,4 +23,9 @@ public class ArticleUserVO {
      * 用户名称
      */
     private String userName;
+
+    /**
+     * 用户简介
+     */
+    private String userProfile;
 }

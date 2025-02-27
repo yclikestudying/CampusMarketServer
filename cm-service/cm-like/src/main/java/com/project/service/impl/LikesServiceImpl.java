@@ -109,8 +109,11 @@ public class LikesServiceImpl extends ServiceImpl<LikesMapper, Likes>
             // 查询被点赞人是否是我的关注
             boolean result = friendFeignClient.isAttention(UserContext.getUserId(), userId);
             if (result) {
+                // 删除我的关注用户动态缓存
                 redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_ATTENTION, UserContext.getUserId()));
             }
+            // 删除我的校园动态缓存
+            redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_SCHOOL, UserContext.getUserId()));
             return "点赞成功";
         }
         return "点赞失败";
@@ -154,6 +157,8 @@ public class LikesServiceImpl extends ServiceImpl<LikesMapper, Likes>
             if (result) {
                 redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_ATTENTION, UserContext.getUserId()));
             }
+            // 删除我的校园动态缓存
+            redisUtil.redisTransaction(RedisKeyConstants.getRedisKey(RedisKeyConstants.ARTICLE_SCHOOL, UserContext.getUserId()));
             return "取消点赞成功";
         }
         return "取消点赞失败";
