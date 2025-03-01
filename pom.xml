@@ -13,6 +13,7 @@
         <module>cm-model</module>
         <module>cm-common</module>
         <module>cm-service</module>
+        <module>cm-chat</module>
     </modules>
 
     <properties>
