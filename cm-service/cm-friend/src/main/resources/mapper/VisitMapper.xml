@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.mapper.VisitMapper">
+
+    <resultMap id="BaseResultMap" type="com.project.domain.Visit">
+            <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="visitorId" column="visitor_id" jdbcType="BIGINT"/>
+            <result property="visitedId" column="visited_id" jdbcType="BIGINT"/>
+            <result property="visitTime" column="visit_time" jdbcType="TIMESTAMP"/>
+            <result property="isDelete" column="is_delete" jdbcType="TINYINT"/>
+    </resultMap>
+
+    <select id="selectVisitUser" parameterType="Long" resultType="com.project.VO.VisitVO">
+        SELECT u.user_id,
+               u.user_name,
+               u.user_avatar,
+               u.user_profile,
+               v.visit_time
+        FROM visit v
+                 JOIN
+             user u ON v.visitor_id = u.user_id
+        WHERE v.visited_id = #{visitedId}
+          AND v.is_delete = 0
+          AND u.is_delete = 0;
+    </select>
+
+    <sql id="Base_Column_List">
+        id,visitor_id,visited_id,
+        visit_time,is_delete
+    </sql>
+</mapper>

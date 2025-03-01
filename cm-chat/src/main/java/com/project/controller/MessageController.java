@@ -44,4 +44,16 @@ public class MessageController {
         List<MessageVO> list = messageService.queryMessage(otherId);
         return Result.success(ResultCodeEnum.SUCCESS, list);
     }
+
+    /**
+     * 把未读信息标为已读
+     * 请求数据
+     * - otherId 聊天对方的id
+     */
+    @PutMapping("/read")
+    @ApiOperation(value = "把未读信息标为已读")
+    public Result<String> read(@RequestParam("otherId") Long otherId) {
+        boolean result = messageService.read(otherId);
+        return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
+    }
 }

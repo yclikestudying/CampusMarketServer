@@ -26,8 +26,6 @@ import java.util.Objects;
 public class UserController {
     @Resource
     private UserService userService;
-    @Resource
-    private RedisTemplate<String, String> redisTemplate;
 
     /**
      * 查询用户信息
@@ -67,16 +65,6 @@ public class UserController {
     public Result<String> updateAvatar(@RequestParam("file") MultipartFile file) {
         boolean result = userService.updateAvatar(UserContext.getUserId(), file);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
-    }
-
-    /**
-     * 用户退出登录
-     */
-    @DeleteMapping("/logout")
-    @ApiOperation(value = "用户退出")
-    public void logout() {
-        String tokenKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_TOKEN, UserContext.getUserId());
-        redisTemplate.delete(tokenKey);
     }
 
     /**

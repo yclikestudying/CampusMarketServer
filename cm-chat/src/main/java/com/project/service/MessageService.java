@@ -29,4 +29,11 @@ public interface MessageService extends IService<Message> {
      * - otherId 聊天对方的id
      */
     List<MessageVO> queryMessage(Long otherId);
+
+    /**
+     * 把未读信息标为已读
+     * 请求数据
+     * - otherId 聊天对方的id
+     */
+    boolean read(Long otherId);
 }

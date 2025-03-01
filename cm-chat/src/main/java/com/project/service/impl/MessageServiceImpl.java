@@ -1,6 +1,7 @@
 package com.project.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.project.DTO.MessageDTO;
 import com.project.VO.MessageVO;
@@ -92,5 +93,23 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         }
 
         return list;
+    }
+
+    /**
+     * 把未读信息标为已读
+     * 请求数据
+     * - otherId 聊天对方的id
+     */
+    @Override
+    public boolean read(Long otherId) {
+        ValidateUtil.validateSingleLongTypeParam(otherId);
+        Long userId = UserContext.getUserId();
+
+        // 把对方发给我的消息全部标为已读
+        UpdateWrapper<Message> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("send_user_id", otherId)
+                .eq("accept_user_id", userId)
+                .set("is_read", 1);
+        return this.update(updateWrapper);
     }
 }
