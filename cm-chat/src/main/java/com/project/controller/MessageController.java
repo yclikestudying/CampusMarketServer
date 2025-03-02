@@ -1,9 +1,11 @@
 package com.project.controller;
 
 import com.project.VO.MessageVO;
+import com.project.VO.message.MessageListVO;
 import com.project.common.Result;
 import com.project.common.ResultCodeEnum;
 import com.project.service.MessageService;
+import com.project.util.UserContext;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.web.bind.annotation.*;
@@ -55,5 +57,25 @@ public class MessageController {
     public Result<String> read(@RequestParam("otherId") Long otherId) {
         boolean result = messageService.read(otherId);
         return result ? Result.success(ResultCodeEnum.SUCCESS) : Result.fail(ResultCodeEnum.FAIL);
+    }
+
+    /**
+     * 拉取消息列表
+     */
+    @GetMapping("/queryMessageList")
+    @ApiOperation(value = "拉取消息列表")
+    public Result<List<MessageListVO>> queryMessageList() {
+        List<MessageListVO> list = messageService.queryMessageList(UserContext.getUserId());
+        return Result.success(ResultCodeEnum.SUCCESS, list);
+    }
+
+    /**
+     * 查询所有未读消息
+     */
+    @GetMapping("/queryUnReadMessage")
+    @ApiOperation(value = "查询所有未读消息")
+    public Result<Integer> queryUnReadMessage() {
+        Integer count = messageService.queryUnReadMessage();
+        return Result.success(ResultCodeEnum.SUCCESS, count);
     }
 }

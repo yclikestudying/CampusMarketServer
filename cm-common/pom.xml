@@ -73,6 +73,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.project</groupId>
             <artifactId>cm-model</artifactId>
             <version>1.0-SNAPSHOT</version>

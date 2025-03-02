@@ -3,6 +3,7 @@ package com.project.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.project.DTO.MessageDTO;
 import com.project.VO.MessageVO;
+import com.project.VO.message.MessageListVO;
 import com.project.domain.Message;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -36,4 +37,14 @@ public interface MessageService extends IService<Message> {
      * - otherId 聊天对方的id
      */
     boolean read(Long otherId);
+
+    /**
+     * 拉取消息列表
+     */
+    List<MessageListVO> queryMessageList(Long userId);
+
+    /**
+     * 查询所有未读消息
+     */
+    Integer queryUnReadMessage();
 }
