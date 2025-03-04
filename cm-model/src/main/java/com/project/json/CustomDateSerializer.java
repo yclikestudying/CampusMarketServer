@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.SerializerProvider;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * 时间自定义序列化器
@@ -14,6 +15,10 @@ import java.util.Date;
 public class CustomDateSerializer extends JsonSerializer<Date> {
 
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+
+    static {
+        DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC")); // 设置为 UTC 时区
+    }
 
     @Override
     public void serialize(Date date, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {

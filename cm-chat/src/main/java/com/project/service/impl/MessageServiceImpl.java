@@ -80,12 +80,16 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
             return false;
         }
 
-        // 清空消息列表
+        // 清空我的消息列表
         redisUtil.redisTransaction(RedisKeyConstants
-                .getRedisKey(RedisKeyConstants.MESSAGE_LIST, UserContext.getUserId()));
+                .getRedisKey(RedisKeyConstants.MESSAGE_LIST, messageDTO.getSendUserId()));
+        redisUtil.redisTransaction(RedisKeyConstants
+                .getRedisKey(RedisKeyConstants.MESSAGE_LIST, messageDTO.getAcceptUserId()));
         // 清空与某个用户的聊天记录
         redisUtil.redisTransaction(RedisKeyConstants
-                .getRedisKey(RedisKeyConstants.MESSAGE_ARRAY, UserContext.getUserId()));
+                .getRedisKey(RedisKeyConstants.MESSAGE_ARRAY, messageDTO.getSendUserId()));
+        redisUtil.redisTransaction(RedisKeyConstants
+                .getRedisKey(RedisKeyConstants.MESSAGE_ARRAY, messageDTO.getAcceptUserId()));
         return true;
     }
 
@@ -129,7 +133,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
             }
             if (!list.isEmpty()) {
                 // 存入 Redis
-                redisUtil.setRedisData(redisKey, gson.toJson(redisData));
+                redisUtil.setRedisData(redisKey, gson.toJson(list));
                 return list;
             }
         }
@@ -151,7 +155,13 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         updateWrapper.eq("send_user_id", otherId)
                 .eq("accept_user_id", userId)
                 .set("is_read", 1);
-        return this.update(updateWrapper);
+        this.update(updateWrapper);
+
+        // 清空我的消息列表
+        redisUtil.redisTransaction(RedisKeyConstants
+                .getRedisKey(RedisKeyConstants.MESSAGE_LIST, userId));
+
+        return true;
     }
 
     /**
@@ -234,9 +244,11 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
                             .map(CompletableFuture::join) // 阻塞等待每个任务完成
                             .collect(Collectors.toList());
 
-                    // 存入 Redis
-                    redisUtil.setRedisData(redisKey, gson.toJson(collect));
-                    return collect;
+                    if (!collect.isEmpty()) {
+                        // 存入 Redis
+                        redisUtil.setRedisData(redisKey, gson.toJson(collect));
+                        return collect;
+                    }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }

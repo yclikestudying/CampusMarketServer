@@ -9,8 +9,7 @@ import java.util.Date;
 import lombok.Data;
 
 /**
- * 
- * @TableName goods
+ * 商品
  */
 @TableName(value ="goods")
 @Data
@@ -22,34 +21,29 @@ public class Goods implements Serializable {
     private Long id;
 
     /**
-     * 出售商品用户id
+     * 发表用户id
      */
     private Long userId;
 
     /**
-     * 商品描述
+     * 商品内容
      */
-    private String goodsDescription;
+    private String goodsContent;
 
     /**
      * 商品图片
      */
-    private String goodsImage;
+    private String goodsPhotos;
 
     /**
      * 商品价格
      */
-    private String goodsPrice;
+    private Integer goodsPrice;
 
     /**
      * 创建时间
      */
     private Date createTime;
-
-    /**
-     * 更新时间
-     */
-    private Date updateTime;
 
     /**
      * 0-未删除 1-已删除
