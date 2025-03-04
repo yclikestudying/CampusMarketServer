@@ -9,5 +9,5 @@ import java.util.List;
 
 public interface GoodsMapper extends BaseMapper<Goods> {
     // 查询所有商品(排除自己的)
-    List<GoodsListVO> queryAllGoods(@Param("userId") Long userId);
+    List<GoodsListVO> queryAllGoods();
 }

@@ -129,7 +129,7 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods>
     }
 
     /**
-     * 查询所有商品（排除自己的）
+     * 查询所有商品
      */
     @Override
     public List<GoodsListVO> queryAllGoods() {
@@ -137,6 +137,6 @@ public class GoodsServiceImpl extends ServiceImpl<GoodsMapper, Goods>
         Long userId = UserContext.getUserId();
 
         // 查询所有商品
-        return goodsMapper.queryAllGoods(userId);
+        return goodsMapper.queryAllGoods();
     }
 }

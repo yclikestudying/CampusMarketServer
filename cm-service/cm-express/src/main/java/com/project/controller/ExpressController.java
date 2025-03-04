@@ -46,10 +46,10 @@ public class ExpressController {
     }
 
     /**
-     * 查询所有的跑腿服务（排除自己的）
+     * 查询所有的跑腿服务
      */
     @GetMapping("/queryAllExpress")
-    @ApiOperation(value = "查询所有的跑腿服务（排除自己的）")
+    @ApiOperation(value = "查询所有的跑腿服务")
     public Result<List<ExpressListVO>> queryAllExpress() {
         List<ExpressListVO> list = expressService.queryAllExpress();
         return Result.success(ResultCodeEnum.SUCCESS, list);

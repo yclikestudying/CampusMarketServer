@@ -111,13 +111,7 @@ public class ExpressServiceImpl extends ServiceImpl<ExpressMapper, Express>
         // 查询数据库记录
         List<ExpressListVO> expressListVOS = expressMapper.queryAllExpress();
 
-        // 排除自己
-        List<ExpressListVO> collect = expressListVOS
-                .stream()
-                .filter(expressListVO -> !Objects.equals(expressListVO.getUserId(), userId))
-                .collect(Collectors.toList());
-
-        return collect;
+        return expressListVOS;
     }
 
     /**

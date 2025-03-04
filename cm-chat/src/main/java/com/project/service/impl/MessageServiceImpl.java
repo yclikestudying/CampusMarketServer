@@ -104,7 +104,7 @@ public class MessageServiceImpl extends ServiceImpl<MessageMapper, Message>
         Long userId = UserContext.getUserId();
 
         // 查询 Redis
-        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.MESSAGE_ARRAY, userId);
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.MESSAGE_ARRAY, otherId);
         String redisData = redisUtil.getRedisData(redisKey);
         List<MessageVO> messageVOList = gson.fromJson(redisData, new TypeToken<List<MessageVO>>() {
         }.getType());

@@ -96,10 +96,10 @@ public class GoodsController {
     }
 
     /**
-     * 查询所有商品（排除自己的）
+     * 查询所有商品
      */
     @GetMapping("/queryAllGoods")
-    @ApiOperation(value = "查询所有商品（排除自己的）")
+    @ApiOperation(value = "查询所有商品")
     public Result<List<GoodsListVO>> queryAllGoods() {
         List<GoodsListVO> list = goodsService.queryAllGoods();
         return Result.success(ResultCodeEnum.SUCCESS, list);
