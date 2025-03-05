@@ -14,6 +14,7 @@
         <module>cm-common</module>
         <module>cm-service</module>
         <module>cm-chat</module>
+        <module>cm-admin</module>
     </modules>
 
     <properties>

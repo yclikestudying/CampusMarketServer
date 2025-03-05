@@ -15,7 +15,6 @@ public class UserVO {
     /**
      * 用户id
      */
-    @TableId(type = IdType.AUTO)
     private Long userId;
 
     /**

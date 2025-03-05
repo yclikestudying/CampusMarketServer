@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.project.mapper.AdminMapper">
+
+    <!--查询用户是否存在-->
+    <select id="isUserExist" parameterType="String" resultType="com.project.domain.User">
+        select user_id,
+               user_name,
+               user_phone,
+               user_password,
+               user_avatar,
+               user_gender,
+               user_birthday,
+               user_profile,
+               user_location,
+               user_hometown,
+               user_profession,
+               user_tags,
+               create_time,
+               is_admin
+        from user
+        where user_phone = #{userPhone}
+    </select>
+
+</mapper>
