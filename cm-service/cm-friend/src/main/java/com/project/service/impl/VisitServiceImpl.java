@@ -63,7 +63,7 @@ public class VisitServiceImpl extends ServiceImpl<VisitMapper, Visit>
         visit.setVisitedId(visitedId);
 
         // 删除 Redis 记录
-        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_VISIT, userId);
+        String redisKey = RedisKeyConstants.getRedisKey(RedisKeyConstants.USER_VISIT, visitedId);
         redisUtil.redisTransaction(redisKey);
         return visitMapper.insert(visit) > 0;
     }
